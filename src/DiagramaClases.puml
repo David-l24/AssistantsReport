@@ -1,108 +1,203 @@
 @startuml
+skinparam classAttributeIconSize 0
 
-title Sistema de Reporte y Seguimiento de Ayudantes (Flujo Manual Jefatura)
+package "Dominio" {
 
-enum EstadoProyecto {
-  SOLICITADO
-  APROBADO
-  RECHAZADO
-  FINALIZADO
+  class Proyecto {
+    -codigo : String
+    -nombre : String
+    -periodoInicio : String
+    -duracionSemestres : int
+    -estado : EstadoProyecto
+    -numeroAyudantesPlanificados : int
+    +cambiarEstado(nuevoEstado : EstadoProyecto) : void
+    +esAprobado() : boolean
+    +tieneAyudantesPlanificados() : boolean
+  }
+
+  enum EstadoProyecto {
+    RECIBIDO
+    EN_REVISION
+    APROBADO
+    NO_APROBADO
+  }
+
+  class Director {
+    -identificacion : String
+    -nombres : String
+    -apellidos : String
+    -correoInstitucional : String
+    +registrarSeguimiento() : void
+    +cerrarSeguimiento() : void
+  }
+
+  class JefaturaDICC {
+    -identificacion : String
+    -nombres : String
+    -correoInstitucional : String
+    +registrarProyecto() : void
+    +registrarPlanificacion() : void
+    +actualizarEstadoProyecto() : void
+    +consultarTrazabilidad() : void
+  }
+
+  class ReporteAyudante {
+    -id : String
+    -periodoAcademico : String
+    -estado : EstadoSeguimiento
+    -fechaCreacion : Date
+    -fechaCierre : Date
+    +agregarParticipacion() : boolean
+    +cerrar() : boolean
+    +estaCompleto() : boolean
+  }
+
+  enum EstadoSeguimiento {
+    SIN_REGISTRO
+    EN_EDICION
+    CERRADO
+  }
+
+  class Ayudante {
+    -identificacion : String
+    -nombres : String
+    -apellidos : String
+    -correoElectronico : String
+    -rol : String
+    -carrera : String
+    -nivelAcademico : String
+  }
+
+  class Ayudantía {
+    -fechaInicio : Date
+    -fechaRetiro : Date
+    -motivoRetiro : String
+    -estado : EstadoParticipacion
+    +esActivo() : boolean
+    +registrarRetiro() : void
+  }
+
+  enum EstadoParticipacion {
+    ACTIVO
+    RETIRADO
+  }
+
+  class PeriodoAcademico {
+    -codigo : String
+    -nombre : String
+    -fechaInicio : Date
+    -fechaFin : Date
+    -fechaLimiteRegistro : Date
+    +esActivo() : boolean
+    +diasRestantes() : int
+  }
+
+  class ResumenSeguimiento {
+    -cantidadPlanificada : int
+    -cantidadRegistrada : int
+    -cantidadActivos : int
+    -cantidadRetirados : int
+    -cumplePlanificacion : boolean
+    -periodo : String
+  }
+
+
+  class Notificacion {
+    -tipo : String
+    -destinatario : String
+    -fechaEnvio : Date
+    -contenido : String
+    -estado : String
+  }
+
+  class AuditoriaSeguimiento {
+    -tipoOperacion : String
+    -usuarioEjecutor : String
+    -fechaHora : Date
+    -descripcion : String
+    -entidadAfectada : String
+  }
 }
 
-class Director {
-  -identificacion: String
-  -nombres: String
-  -apellidos: String
-  -correoInstitucional: String
-  +obtenerDatos(): String
-  +obtenerProyectos(): List<Proyecto>
+package "Servicios de Dominio" {
+
+  interface IEvaluadorCumplimiento {
+    +evaluar(seguimiento : ReporteAyudante) : ResumenSeguimiento
+  }
+
+  class EvaluadorCumplimientoAyudantía {
+    +evaluar(seguimiento : ReporteAyudante) : ResumenSeguimiento
+  }
+
+  interface IGestorNotificaciones {
+    +programarRecordatorios(periodo : PeriodoAcademico) : void
+    +notificarDirectoresPendientes() : void
+    +notificarCumplimientoTotal() : void
+  }
+
+  class GestorNotificacionesEmail {
+    +programarRecordatorios(periodo : PeriodoAcademico) : void
+    +notificarDirectoresPendientes() : void
+    +notificarCumplimientoTotal() : void
+  }
+
+  interface IGeneradorReportes {
+    +generarReporteTrazabilidad(proyecto : Proyecto) : Reporte
+    +generarReporteParticipacion(periodo : PeriodoAcademico) : Reporte
+  }
+
+  class GeneradorReportesPDF {
+    +generarReporteTrazabilidad(proyecto : Proyecto) : Reporte
+    +generarReporteParticipacion(periodo : PeriodoAcademico) : Reporte
+  }
+
+  IEvaluadorCumplimiento <|.. EvaluadorCumplimientoAyudantía
+  IGestorNotificaciones <|.. GestorNotificacionesEmail
+  IGeneradorReportes <|.. GeneradorReportesPDF
 }
 
-class JefaturaDICC {
-  -identificacion: String
-  -nombres: String
-  -esAdministrador: boolean
+' =====================
+' RELACIONES DEL DOMINIO
+' =====================
 
-  ' -- Nuevos métodos para el flujo manual --
-  +registrarProyectoManual(datosProyecto, idDirector, numAyudantes): Proyecto
-  +obtenerProyectosPendientes(): List<Proyecto>
-  +confirmarAprobacionProyecto(codigoProyecto): boolean
-  +rechazarProyecto(codigoProyecto, motivo): boolean
+Proyecto "1" --> "1" Director : dirigidoPor
+Proyecto "1" --> "0..*" ReporteAyudante : tiene
+Proyecto --> EstadoProyecto
 
-  ' -- Métodos existentes --
-  +configurarFechaLimite(periodo, fecha): void
-  +consultarEstadisticas(): Estadisticas
-}
+ReporteAyudante "1" *-- "1..*" Ayudantía : contiene
+ReporteAyudante "1" --> "1" PeriodoAcademico : correspondeA
+ReporteAyudante --> EstadoSeguimiento
 
-class Proyecto {
-  -codigo: String
-  -nombre: String
-  -estado: EstadoProyecto
-  -fechaInicio: Date
-  -fechaFinalizacion: Date
-  -fechaAprobacionJefatura: Date
+Ayudantía "1" --> "1" Ayudante : referencia
+Ayudantía --> EstadoParticipacion
+Ayudantía "1" --> "0..*" AuditoriaSeguimiento : genera
 
-  ' -- Lógica de Estado --
-  +solicitarAprobacion(): void
-  +marcarComoAprobado(): void
-  +estaAprobado(): boolean
-  +obtenerInformacion(): String
-}
 
-class PlanificacionAyudantes {
-  -cantidadSolicitada: int
-  -presupuestoReferencial: double
-  -tienePresupuestoAprobado: boolean
-  +validarPlanificacion(): boolean
-  +actualizarCantidad(nuevaCantidad): void
-}
+Notificacion "0..*" --> "1" Director : notificaA
+Notificacion "0..*" --> "1" JefaturaDICC : notificaA
 
-class RegistroAyudantes {
-  -id: String
-  -estado: String
-  -fechaCreacion: Date
-  -fechaCierre: Date
-  +agregarAyudante(ayudante): boolean
-  +validarCompletitud(): boolean
-  +generarResumen(): String
-  +cerrarRegistro(): boolean
-}
 
-class Ayudante {
-  -nombreCompleto: String
-  -identificacion: String
-  -correoElectronico: String
-  -estado: String
-  +esActivo(): boolean
-}
+JefaturaDICC "1" --> "0..*" PeriodoAcademico : configura
 
-class PeriodoAcademico {
-  -codigo: String
-  -nombre: String
-  -fechaInicio: Date
-  -fechaFin: Date
-  +esActivo(): boolean
-}
+Director --> Ayudante : registra
+Director --> Ayudantía : crea
+Director --> ReporteAyudante : gestiona
 
-class AuditoriaRegistro {
-  -tipoEvento: String
-  -usuario: String
-  -fechaHora: Date
-  -descripcion: String
-}
+JefaturaDICC --> Proyecto : registra
 
-' Relaciones
-Proyecto "N" o-- "1" Director
-Proyecto "1" *-- "1" PlanificacionAyudantes
-Proyecto "1" -- "N" RegistroAyudantes
-RegistroAyudantes "1" o-- "N" Ayudante
-RegistroAyudantes "N" -- "1" PeriodoAcademico
+' =====================
+' RELACIONES DE SERVICIOS
+' =====================
 
-' Relación funcional clave: Jefatura gestiona el estado de los proyectos
-JefaturaDICC ..> Proyecto : "Registra y Aprueba"
-JefaturaDICC ..> Director : "Asigna Proyecto a"
+EvaluadorCumplimientoAyudantía --> ReporteAyudante : evalúa
+EvaluadorCumplimientoAyudantía --> ResumenSeguimiento : genera
 
-' Auditoria
-Proyecto ..> AuditoriaRegistro : "Genera eventos"
-Proyecto -> EstadoProyecto
+GestorNotificacionesEmail --> Notificacion : crea
+GestorNotificacionesEmail --> Director : notifica
+GestorNotificacionesEmail --> PeriodoAcademico : consulta
+
+GeneradorReportesPDF --> Proyecto : consulta
+GeneradorReportesPDF --> ReporteAyudante : consulta
+GeneradorReportesPDF --> Ayudantía : consulta
+
 @enduml

@@ -1,0 +1,108 @@
+@startuml
+
+title Sistema de Reporte y Seguimiento de Ayudantes (Flujo Manual Jefatura)
+
+enum EstadoProyecto {
+  SOLICITADO
+  APROBADO
+  RECHAZADO
+  FINALIZADO
+}
+
+class Director {
+  -identificacion: String
+  -nombres: String
+  -apellidos: String
+  -correoInstitucional: String
+  +obtenerDatos(): String
+  +obtenerProyectos(): List<Proyecto>
+}
+
+class JefaturaDICC {
+  -identificacion: String
+  -nombres: String
+  -esAdministrador: boolean
+
+  ' -- Nuevos métodos para el flujo manual --
+  +registrarProyectoManual(datosProyecto, idDirector, numAyudantes): Proyecto
+  +obtenerProyectosPendientes(): List<Proyecto>
+  +confirmarAprobacionProyecto(codigoProyecto): boolean
+  +rechazarProyecto(codigoProyecto, motivo): boolean
+
+  ' -- Métodos existentes --
+  +configurarFechaLimite(periodo, fecha): void
+  +consultarEstadisticas(): Estadisticas
+}
+
+class Proyecto {
+  -codigo: String
+  -nombre: String
+  -estado: EstadoProyecto
+  -fechaInicio: Date
+  -fechaFinalizacion: Date
+  -fechaAprobacionJefatura: Date
+
+  ' -- Lógica de Estado --
+  +solicitarAprobacion(): void
+  +marcarComoAprobado(): void
+  +estaAprobado(): boolean
+  +obtenerInformacion(): String
+}
+
+class PlanificacionAyudantes {
+  -cantidadSolicitada: int
+  -presupuestoReferencial: double
+  -tienePresupuestoAprobado: boolean
+  +validarPlanificacion(): boolean
+  +actualizarCantidad(nuevaCantidad): void
+}
+
+class RegistroAyudantes {
+  -id: String
+  -estado: String
+  -fechaCreacion: Date
+  -fechaCierre: Date
+  +agregarAyudante(ayudante): boolean
+  +validarCompletitud(): boolean
+  +generarResumen(): String
+  +cerrarRegistro(): boolean
+}
+
+class Ayudante {
+  -nombreCompleto: String
+  -identificacion: String
+  -correoElectronico: String
+  -estado: String
+  +esActivo(): boolean
+}
+
+class PeriodoAcademico {
+  -codigo: String
+  -nombre: String
+  -fechaInicio: Date
+  -fechaFin: Date
+  +esActivo(): boolean
+}
+
+class AuditoriaRegistro {
+  -tipoEvento: String
+  -usuario: String
+  -fechaHora: Date
+  -descripcion: String
+}
+
+' Relaciones
+Proyecto "N" o-- "1" Director
+Proyecto "1" *-- "1" PlanificacionAyudantes
+Proyecto "1" -- "N" RegistroAyudantes
+RegistroAyudantes "1" o-- "N" Ayudante
+RegistroAyudantes "N" -- "1" PeriodoAcademico
+
+' Relación funcional clave: Jefatura gestiona el estado de los proyectos
+JefaturaDICC ..> Proyecto : "Registra y Aprueba"
+JefaturaDICC ..> Director : "Asigna Proyecto a"
+
+' Auditoria
+Proyecto ..> AuditoriaRegistro : "Genera eventos"
+Proyecto -> EstadoProyecto
+@enduml

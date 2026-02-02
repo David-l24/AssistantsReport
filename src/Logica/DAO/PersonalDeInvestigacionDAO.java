@@ -1,10 +1,7 @@
 package Logica.DAO;
 
 import Logica.Conexiones.ConexionBD;
-import Logica.Entidades.PersonalDeInvestigacion;
-import Logica.Entidades.Ayudante;
-import Logica.Entidades.Asistente; // Asegúrate de tener esta clase creada
-import Logica.Entidades.Tecnico;   // Asegúrate de tener esta clase creada
+import Logica.Entidades.*;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,8 +15,7 @@ public class PersonalDeInvestigacionDAO {
 
     public List<PersonalDeInvestigacion> obtenerTodos() throws SQLException {
         List<PersonalDeInvestigacion> lista = new ArrayList<>();
-        // Ordenamos por apellido para que se vea bien en listas
-        String sql = "SELECT * FROM integrante ORDER BY apellidos, nombres";
+        String sql = "SELECT * FROM public.personaldeinvestigacion ORDER BY apellidos, nombres";
 
         try (Statement stmt = connection.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
@@ -31,10 +27,17 @@ public class PersonalDeInvestigacionDAO {
     }
 
     public List<PersonalDeInvestigacion> obtenerPorTipo(String tipo) throws SQLException {
-        List<PersonalDeInvestigacion> lista = new ArrayList<>();
-        // OJO: En tu imagen la columna se llama 'tipo', no 'tipo_integrante'
-        String sql = "SELECT * FROM integrante WHERE tipo = ? ORDER BY apellidos, nombres";
+        String sql = "SELECT * FROM public.personaldeinvestigacion WHERE tipo = ? ORDER BY apellidos, nombres";
 
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setString(1, tipo);
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                lista.add(mapResultSet(rs));
+            }
+        }
+        // Nota: lista no estaba declarada dentro de este scope en el bloque anterior, corregido aquí:
+        List<PersonalDeInvestigacion> lista = new ArrayList<>();
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, tipo);
             ResultSet rs = stmt.executeQuery();
@@ -46,9 +49,7 @@ public class PersonalDeInvestigacionDAO {
     }
 
     public PersonalDeInvestigacion obtenerPorCedula(String cedula) throws SQLException {
-        // OJO: En tu imagen la columna PK es 'cedula', no 'identificacion'
-        String sql = "SELECT * FROM integrante WHERE cedula = ?";
-
+        String sql = "SELECT * FROM public.personaldeinvestigacion WHERE cedula = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, cedula);
             ResultSet rs = stmt.executeQuery();
@@ -60,63 +61,52 @@ public class PersonalDeInvestigacionDAO {
     }
 
     public boolean guardar(PersonalDeInvestigacion p) throws SQLException {
-        // Quitamos carrera y semestre. Agregamos 'tipo' que es obligatorio para saber quién es.
-        String sql = "INSERT INTO integrante (cedula, nombres, apellidos, correo, tipo, id_usuario) VALUES (?, ?, ?, ?, ?)";
+        // Se asume que id_proyecto no puede ser nulo en la BD.
+        // Si el objeto Java no tiene proyecto (0), esto podría fallar si no hay FK válida.
+        String sql = "INSERT INTO public.personaldeinvestigacion (cedula, id_usuario, nombres, apellidos, correo, tipo, id_proyecto) VALUES (?, ?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, p.getCedula());
-            stmt.setString(2, p.getNombres());
-            stmt.setString(3, p.getApellidos());
-            stmt.setString(4, p.getCorreo());
-
-            // MAGIA AQUÍ: Obtenemos el nombre de la clase (Ayudante, Tecnico, etc.)
-            // y lo guardamos en la BD para saber qué es en el futuro.
-            stmt.setString(5, p.getClass().getSimpleName());
-            stmt.setInt(6, p.getIdUsuario());
-
+            stmt.setInt(2, p.getIdUsuario());
+            stmt.setString(3, p.getNombres());
+            stmt.setString(4, p.getApellidos());
+            stmt.setString(5, p.getCorreo());
+            stmt.setString(6, p.getClass().getSimpleName()); // Guarda "Ayudante", "Tecnico", etc.
+            stmt.setInt(7, p.getIdProyecto());
 
             return stmt.executeUpdate() > 0;
         }
     }
 
     public boolean actualizar(PersonalDeInvestigacion p) throws SQLException {
-        String sql = "UPDATE integrante SET nombres = ?, apellidos = ?, correo = ? WHERE cedula = ?";
+        String sql = "UPDATE public.personaldeinvestigacion SET nombres = ?, apellidos = ?, correo = ?, id_proyecto = ? WHERE cedula = ?";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, p.getNombres());
             stmt.setString(2, p.getApellidos());
             stmt.setString(3, p.getCorreo());
-            stmt.setString(4, p.getCedula());
+            stmt.setInt(4, p.getIdProyecto());
+            stmt.setString(5, p.getCedula());
 
             return stmt.executeUpdate() > 0;
         }
     }
 
     public boolean eliminar(String cedula) throws SQLException {
-        String sql = "DELETE FROM integrante WHERE cedula = ?";
-
+        String sql = "DELETE FROM public.personaldeinvestigacion WHERE cedula = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, cedula);
             return stmt.executeUpdate() > 0;
         }
     }
 
-    /**
-     * Método Factory: Decide qué instancia crear según la columna 'tipo' de la BD.
-     */
     private PersonalDeInvestigacion mapResultSet(ResultSet rs) throws SQLException {
         PersonalDeInvestigacion persona = null;
-
-        // 1. Obtenemos el tipo discriminador de la base de datos
         String tipoBD = rs.getString("tipo");
 
-        // Si el campo es nulo, debemos manejarlo (o lanzar error)
-        if (tipoBD == null) {
-            tipoBD = "";
-        }
+        if (tipoBD == null) tipoBD = "";
 
-        // 2. Instanciamos la clase correcta
-        switch (tipoBD.toUpperCase()) { // Convertimos a mayúsculas para evitar errores de tipeo
+        switch (tipoBD.toUpperCase()) {
             case "AYUDANTE":
                 persona = new Ayudante();
                 break;
@@ -124,25 +114,21 @@ public class PersonalDeInvestigacionDAO {
                 persona = new Asistente();
                 break;
             case "TECNICO":
-            case "TÉCNICO": // Por si acaso guardaron con tilde
+            case "TÉCNICO":
                 persona = new Tecnico();
                 break;
             default:
-                // Opción por defecto o lanzar excepción si el tipo es desconocido
-                // Por ahora usamos Ayudante como fallback para no romper el programa
+                // Fallback por defecto
                 persona = new Ayudante();
-                System.out.println("ADVERTENCIA: Tipo desconocido en BD: " + tipoBD);
                 break;
         }
 
-        // 3. Llenamos los datos comunes del padre
         persona.setCedula(rs.getString("cedula"));
+        persona.setIdUsuario(rs.getInt("id_usuario"));
         persona.setNombres(rs.getString("nombres"));
         persona.setApellidos(rs.getString("apellidos"));
         persona.setCorreo(rs.getString("correo"));
-
-        // Nota: usuarioId e id_proyecto están en la tabla pero no en tu clase Java.
-        // Si los necesitas, agrégalos a la clase padre.
+        persona.setIdProyecto(rs.getInt("id_proyecto"));
 
         return persona;
     }

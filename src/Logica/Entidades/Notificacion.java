@@ -4,35 +4,43 @@ import java.time.LocalDateTime;
 
 public class Notificacion {
     private int idNotificacion;
+    private int idUsuario; // Identificador universal del usuario (Director, Jefe o Personal)
     private String contenido;
-    private Director destinatario;
     private LocalDateTime fecha;
 
+    // Constructor vacío
     public Notificacion() {
     }
 
-    // Constructor para crear una nueva notificación (sin ID, la BD lo asigna)
-    public Notificacion(String contenido, Director destinatario) {
+    // Constructor para crear nueva notificación
+    public Notificacion(int idUsuario, String contenido) {
+        this.idUsuario = idUsuario;
         this.contenido = contenido;
-        this.destinatario = destinatario;
-        this.fecha = LocalDateTime.now(); // Asigna la fecha actual automáticamente
+        this.fecha = LocalDateTime.now();
     }
 
-    public void enviar(){
-        if(destinatario != null) {
-            // Aquí podrías llamar al DAO para guardar,
-            // o simplemente añadirlo a la lista en memoria del director.
-            destinatario.agregarNotificacion(this);
-        }
+    // Constructor completo (para mapeo desde BD)
+    public Notificacion(int idNotificacion, int idUsuario, String contenido, LocalDateTime fecha) {
+        this.idNotificacion = idNotificacion;
+        this.idUsuario = idUsuario;
+        this.contenido = contenido;
+        this.fecha = fecha;
     }
 
-    // Getters y Setters
     public int getIdNotificacion() {
         return idNotificacion;
     }
 
     public void setIdNotificacion(int idNotificacion) {
         this.idNotificacion = idNotificacion;
+    }
+
+    public int getIdUsuario() {
+        return idUsuario;
+    }
+
+    public void setIdUsuario(int idUsuario) {
+        this.idUsuario = idUsuario;
     }
 
     public String getContenido() {
@@ -43,19 +51,21 @@ public class Notificacion {
         this.contenido = contenido;
     }
 
-    public Director getDestinatario() {
-        return destinatario;
-    }
-
-    public void setDestinatario(Director destinatario) {
-        this.destinatario = destinatario;
-    }
-
     public LocalDateTime getFecha() {
         return fecha;
     }
 
     public void setFecha(LocalDateTime fecha) {
         this.fecha = fecha;
+    }
+
+    @Override
+    public String toString() {
+        return "Notificacion{" +
+                "id=" + idNotificacion +
+                ", idUsuario=" + idUsuario +
+                ", contenido='" + contenido + '\'' +
+                ", fecha=" + fecha +
+                '}';
     }
 }

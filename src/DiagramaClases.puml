@@ -1,191 +1,230 @@
-@startuml
+@startuml Sistema de Gestión de Personal De Investigación - Actualizado
+
 skinparam classAttributeIconSize 0
 
-package "Dominio" {
+package "Logica.Entidades" {
 
-  class Proyecto {
-    -codigo : String
-    -nombre : String
-    -periodoInicio : String
-    -duracionSemestres : int
-    -estado : EstadoProyecto
-    -numeroAyudantesPlanificados : int
-    +cambiarEstado(nuevoEstado: EstadoProyecto) : void
-    +esAprobado() : boolean
-    +tieneAyudantesPlanificados() : boolean
-  }
+    class Jefatura {
+        - nombres
+        - apellidos
+        - correo
+        - cedula
 
- enum EstadoProyecto {
-    RECIBIDO
-    EN_REVISION
-    APROBADO
-    NO_APROBADO
-  }
+        + registrarProyecto()
+        + actualizarEstadoProyecto()
+        + revisarReportes()
+        + aprobarReportes()
+        + revisarInformesDeActividades()
+    }
 
- class Director {
-    -identificacion : String
-    -nombres : String
-    -apellidos : String
-    -correo : String
-    +generarReporteAyudantes() : void
-    +registrarReporte() : void
-    +cerrarReporte() : void
-  }
+    class Director {
+        - nombres: String
+        - apellidos: String
+        - cedula: String
+        - correo: String
 
-  class JefaturaDICC {
-    -identificacion : String
-    -nombres : String
-    -correoInstitucional : String
-    +registrarProyecto() : void
-    +registrarPlanificacion() : void
-    +actualizarEstadoProyecto() : void
-    +consultarTrazabilidad() : void
-  }
+        + visualizarSeguimiento()
+        + registrarParticipacion()
+        + gestionarSeguimiento()
+        + actualizarContraseña()
+        + registrarPersonalDeInvestigacion()
+        + iniciarReporte()
+        + editarReporte()
+        + cerrarReporte()
+        + enviarReporte()
+        + aprobarInformeDeActividades()
+        + revisarInformesDeActividades()
+    }
 
-  class ReporteAyudantes {
-    -id : String
-    -periodoAcademico : String
-    -estado : EstadoReporte
-    -fechaCreacion : Date
-    -fechaCierre : Date
-    +agregarParticipacion() : boolean
-    +cerrar() : boolean
-    +estaCompleto() : boolean
-  }
+    abstract class PersonalDeInvestigacion {
+        - cedula: String
+        - nombres: String
+        - apellidos: String
+        - correo: String
 
-  enum EstadoReporte {
-    SIN_REGISTRO
-    EN_EDICION
-    CERRADO
-  }
+        + iniciarInformeActividades()
+        + editarInformeActividades()
+        + cerrarInformeActividades()
+    }
 
-  class Ayudante {
-    -identificacion : String
-    -nombres : String
-    -apellidos : String
-    -correoElectronico : String
-    -carrera : String
-    -semestre : int
-  }
+    abstract class Proyecto {
+        - codigo: String
+        - nombre: String
+        - periodoInicio: PeriodoAcademico
+        - duracionSemestres: int
+        - estado: EstadoProyecto
+        - director: Director
+        - numAsistentesPlanificados: int
+        - numAyudantesPlanificados: int
+        - numTecnicosPlanificados: int
+        --
+        + getTotalPersonalPlanificado(): int
+        + cambiarEstado(EstadoProyecto): void
+        + esEnEjecucion(): boolean
+        + tieneIntegrantesPlanificados(): boolean
+    }
 
-  class Ayudantia {
-    -fechaInicio : Date
-    -fechaFin : Date
-    -fechaRetiro : Date
-    -motivoRetiro : String
-    -estado : EstadoParticipacion
-    +esActivo() : boolean
-    +registrarRetiro() : void
-  }
+    class ProyectoSemilla {
+        - tipoProyecto: String
+    }
 
-  enum EstadoAyudantia {
-    ACTIVO
-    RETIRADO
-    INACTIVO
-  }
+    class ProyectoInterno {
+        - tipoProyecto: String
+    }
 
-  class PeriodoAcademico {
-    -codigo : String
-    -nombre : String
-    -fechaInicio : Date
-    -fechaFin : Date
-    -fechaLimiteRegistro : Date
-    +esActivo() : boolean
-    +diasRestantes() : int
-  }
+    class Reporte {
+        - numeroReporte: int
+        - periodoAcademicoId: String
+        - proyecto: Proyecto
+        - estado: EstadoReporte
+        - fechaCreacion: LocalDateTime
+        - fechaCierre: LocalDateTime
 
-  class ResumenReporte {
-    -cantidadPlanificada : int
-    -cantidadRegistrada : int
-    -cantidadActivos : int
-    -cantidadRetirados : int
-    -cumplePlanificacion : boolean
-    -periodo : String
-  }
+        + agregarParticipacion()
+        + cerrar()
+        + estaCompleto()
+        + estaCerrado()
+        + estaEnEdicion()
+        + puedeEditarse()
+    }
+
+    class PeriodoAcademico {
+        - codigo: String
+        - fechaInicio: LocalDate
+        - fechaFin: LocalDate
+        - fechaMitad: LocalDate
+        --
+        + diasRestantes(): int
+    }
+
+    class Participacion {
+        - id: int
+        - personalDeInvestigacion: PersonalDeInvestigacion
+        - fechaInicio: LocalDate
+        - fechaFin: LocalDate
+        - fechaRetiro: LocalDate
+        - motivoRetiro: String
+        - estado: EstadoParticipacion
+
+        + esActivo(): boolean
+        + registrarRetiro(String): void
+        + estaRetirado(): boolean
+        + haFinalizado(): boolean
+        + calcularDuracion(): int
+        + agregarInforme(InformeActividad): void
+    }
+
+    class InformeActividad {
+        - id: int
+        - fechaRegistro: LocalDate
+        - descripcionActividades: String
+        - horaEntrada: int
+        - horaSalida: int
+        - estado: EstadoInforme
+        --
+        + registrarActividades(String): void
+        + enviarParaRevision(): void
+        + aprobar(): void
+        + rechazar(String motivo): void
+    }
+
+    class ResumenSeguimiento {
+        - cantidadAsistentesPlanificados: int
+        - cantidadAsistentesRegistrados: int
+        - cantidadAsistentesActivos: int
+        - cantidadAsistentesRetirados: int
+        - totalPlanificado: int
+        - totalRegistrado: int
+        - cumplePlanificacionGlobal: boolean
+        --
+        + calcularTotales(): void
+        + verificarCumplimiento(): boolean
+    }
+
+    class Notificacion {
+        - id: int
+        - destinatario: Director
+        - fechaEnvio: LocalDateTime
+        - contenido: String
+        --
+        + enviar(): void
+    }
+
+    class Asistente {}
+    class Ayudante {
+        - carrera: String
+        - nivelSemestre: Integer
+    }
+    class Tecnico {}
+
+    enum EstadoProyecto {
+        EN_REVISION
+        APROBADO
+        NO_APROBADO
+        FINALIZADO
+    }
+
+    enum EstadoReporte {
+        EN_EDICION
+        CERRADO
+        APROBADO
+    }
+
+    enum EstadoParticipacion {
+        ACTIVO
+        RETIRADO
+        FINALIZADO
+    }
 
 
-  class Notificacion {
-    -tipo : String
-    -destinatario : String
-    -fechaEnvio : Date
-    -contenido : String
-    -estado : String
-    +notificar(): void
-  }
 
-  class AuditoriaReporte {
-    -tipoOperacion : String
-    -usuarioEjecutor : String
-    -fechaHora : Date
-    -descripcion : String
-    -entidadAfectada : String
-  }
 }
 
-package "Servicios de Dominio" {
+' ============================================
+' RELACIONES ENTRE ENTIDADES
+' ============================================
 
-  class EvaluadorCumplimientoAyudantia {
-    +evaluar(reporte : ReporteAyudantes) : ResumenReporte
-  }
+' Proyecto y Director
+Director --> Proyecto
+Proyecto --> PeriodoAcademico
 
+' Herencia Proyectos
+ProyectoInterno --|> Proyecto
+ProyectoSemilla --|> Proyecto
 
-  class GestorNotificacionesEmail {
-    +programarRecordatorios(periodo : PeriodoAcademico) : void
-    +notificarDirectoresPendientes() : void
-    +notificarCumplimientoTotal() : void
-  }
+' Reporte
+Proyecto --> Reporte
+Reporte --> PeriodoAcademico
+Reporte --> EstadoReporte
+Reporte --> Participacion
 
+' Resumen
+Proyecto --> ResumenSeguimiento
 
-  class GeneradorReportesPDF {
-    +generarReporteTrazabilidad(proyecto : Proyecto) : Reporte
-    +generarReporteParticipacion(periodo : PeriodoAcademico) : Reporte
-  }
+' [NUEVO] Relacion Participacion -> Informe
+' Una Participacion tiene muchos informes de actividades
+PersonalDeInvestigacion --> InformeActividad
+InformeActividad --> EstadoReporte
 
+' Personal y Participacion
+PersonalDeInvestigacion --> Participacion
+Participacion --> EstadoParticipacion
 
-}
+' Director gestiona Personal
+Director --> PersonalDeInvestigacion
+Director ..> InformeActividad
 
-' =====================
-' RELACIONES DEL DOMINIO
-' =====================
+' Herencia Personal
+Ayudante --|> PersonalDeInvestigacion
+Tecnico --|> PersonalDeInvestigacion
+Asistente --|> PersonalDeInvestigacion
 
-Proyecto "1" --> "1" Director : dirigidoPor
-Proyecto "1" --> "0..*" ReporteAyudantes : tiene
+' Jefatura y Notificaciones
+Notificacion <-- Director
+Jefatura --> Proyecto
+Jefatura --> Notificacion
+' Jefatura revisa informes
 Proyecto --> EstadoProyecto
-
-ReporteAyudantes "1" *-- "1..*" Ayudantia : contiene
-ReporteAyudantes "1" --> "1" PeriodoAcademico : correspondeA
-ReporteAyudantes --> EstadoReporte
-
-Ayudantia "1" --> "1" Ayudante : referencia
-Ayudantia --> EstadoParticipacion
-Ayudantia "1" --> "0..*" AuditoriaReporte : genera
-
-
-Notificacion "0..*" --> "1" Director : notificaA
-Notificacion "0..*" --> "1" JefaturaDICC : notificaA
-
-
-JefaturaDICC "1" --> "0..*" PeriodoAcademico : configura
-
-Director --> Ayudante : registra
-Director --> Ayudantia : crea
-Director --> ReporteAyudante : gestiona
-
-JefaturaDICC --> Proyecto : registra
-
-' =====================
-' RELACIONES DE SERVICIOS
-' =====================
-
-EvaluadorCumplimientoAyudantia --> ReporteAyudante : evalúa
-EvaluadorCumplimientoAyudantia --> ResumenReporte : genera
-
-GestorNotificacionesEmail --> Notificacion : crea
-GestorNotificacionesEmail --> Director : notifica
-GestorNotificacionesEmail --> PeriodoAcademico : consulta
-
-GeneradorReportesPDF --> Proyecto : consulta
-GeneradorReportesPDF --> ReporteAyudante : consulta
-GeneradorReportesPDF --> Ayudantia : consulta
+PersonalDeInvestigacion --> Proyecto
 
 @enduml

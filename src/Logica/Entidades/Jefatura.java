@@ -1,8 +1,14 @@
 package Logica.Entidades;
-import Logica.DAO.*;
+
+import Logica.DAO.InformeActividadesDAO;
+import Logica.DAO.NotificacionDAO;
+import Logica.DAO.ProyectoDAO;
+import Logica.DAO.ReporteDAO;
 import Logica.Enumeraciones.EstadoProyecto;
 import Logica.Enumeraciones.EstadoReporte;
+
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 
 public class Jefatura {
@@ -12,9 +18,10 @@ public class Jefatura {
     private String correo;
     private String cedula;
     private int idUsuario;
+    private List<Notificacion> notificaciones;
 
     public Jefatura (){
-
+        this.notificaciones = new ArrayList<>();
     }
 
     public Jefatura(String nombres, String apellidos, String correo, String cedula) {
@@ -22,85 +29,29 @@ public class Jefatura {
         this.apellidos = apellidos;
         this.correo = correo;
         this.cedula = cedula;
+        this.notificaciones = new ArrayList<>();
     }
 
-    //GETS y SETS
+    // --- LÓGICA DE NEGOCIO ---
 
-    public String getNombres() {
-        return nombres;
-    }
-
-    public void setNombres(String nombres) {
-        this.nombres = nombres;
-    }
-
-    public String getApellidos() {
-        return apellidos;
-    }
-
-    public void setApellidos(String apellidos) {
-        this.apellidos = apellidos;
-    }
-
-    public String getCorreo(){
-        return correo;
-    }
-
-    public void setCorreo(String correo) {
-        this.correo = correo;
-    }
-
-    public String getCedula(){
-        return cedula;
-    }
-
-    public void setCedula(String cedula) {
-        this.cedula = cedula;
-    }
-
-    public int getIdUsuario() {
-        return idUsuario;
-    }
-
-    public void setIdUsuario(int idUsuario) {
-        this.idUsuario = idUsuario;
-    }
-
-    //RESTO FUNCIONES
-
-    /**
-     * Registra un nuevo proyecto en la base de datos.
-     */
     public void registrarProyecto(Proyecto proyecto) throws SQLException {
         ProyectoDAO proyectoDAO = new ProyectoDAO();
         proyectoDAO.guardar(proyecto);
     }
-    //Revisar este método ya que se supone que un proyecto se debe crear con más datos
 
-    /**
-     * Actualiza el estado de un proyecto existente.
-     */
     public void actualizarEstadoProyecto(Proyecto proyecto, EstadoProyecto nuevoEstado) throws SQLException {
         ProyectoDAO proyectoDAO = new ProyectoDAO();
-
         proyecto.setEstado(nuevoEstado);
         proyectoDAO.actualizar(proyecto);
     }
 
-    /**
-     * Obtiene todos los reportes semestrales para revisión.
-     */
     public List<Reporte> revisarReportes() throws SQLException {
         ReporteDAO reporteDAO = new ReporteDAO();
         return reporteDAO.obtenerTodos();
     }
 
-    /**
-     * Aprueba un reporte semestral.
-     */
     public void aprobarReporte(Reporte reporte) throws SQLException {
         ReporteDAO reporteDAO = new ReporteDAO();
-
         if (reporte.getEstado() == EstadoReporte.CERRADO) {
             reporte.setEstado(EstadoReporte.APROBADO);
             reporteDAO.actualizar(reporte);
@@ -109,11 +60,38 @@ public class Jefatura {
         }
     }
 
-    /**
-     * Obtiene un informe de actividades específico para revisión.
-     */
     public InformeActividades revisarInformeDeActividades(int idInforme) throws SQLException {
         InformeActividadesDAO informeDAO = new InformeActividadesDAO();
         return informeDAO.obtenerPorId(idInforme);
     }
+
+    public void cargarNotificaciones() throws SQLException {
+        NotificacionDAO notificacionDAO = new NotificacionDAO();
+        // Usa idUsuario
+        this.notificaciones = notificacionDAO.obtenerPorUsuario(this.idUsuario);
+    }
+
+    public void agregarNotificacion(Notificacion notificacion) {
+        this.notificaciones.add(notificacion);
+    }
+
+    // --- GETTERS Y SETTERS ---
+
+    public String getNombres() { return nombres; }
+    public void setNombres(String nombres) { this.nombres = nombres; }
+
+    public String getApellidos() { return apellidos; }
+    public void setApellidos(String apellidos) { this.apellidos = apellidos; }
+
+    public String getCorreo() { return correo; }
+    public void setCorreo(String correo) { this.correo = correo; }
+
+    public String getCedula() { return cedula; }
+    public void setCedula(String cedula) { this.cedula = cedula; }
+
+    public int getIdUsuario() { return idUsuario; }
+    public void setIdUsuario(int idUsuario) { this.idUsuario = idUsuario; }
+
+    public List<Notificacion> getNotificaciones() { return notificaciones; }
+    public void setNotificaciones(List<Notificacion> notificaciones) { this.notificaciones = notificaciones; }
 }

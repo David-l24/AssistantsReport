@@ -1,18 +1,24 @@
 package Logica.Entidades;
 
-/**
- * Entidad base Integrante alineada con la tabla 'integrante' de la BD
- * Todos los tipos de integrantes (Ayudante, Asistente, Técnico) heredan de aquí
- */
+import Logica.DAO.NotificacionDAO;
+
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
 public abstract class PersonalDeInvestigacion {
     private String cedula;
     private int idUsuario;
+    private int idProyecto; // Añadido para coincidir con la FK de la tabla
     private String nombres;
     private String apellidos;
     private String correo;
 
-    public PersonalDeInvestigacion() {
+    // Cambiado a protected para acceso en herencia si fuera necesario
+    protected List<Notificacion> notificaciones;
 
+    public PersonalDeInvestigacion() {
+        this.notificaciones = new ArrayList<>();
     }
 
     public PersonalDeInvestigacion(String cedula, String nombres, String apellidos, String correo) {
@@ -20,48 +26,38 @@ public abstract class PersonalDeInvestigacion {
         this.nombres = nombres;
         this.apellidos = apellidos;
         this.correo = correo;
+        this.notificaciones = new ArrayList<>();
     }
 
+    // --- LÓGICA DE NEGOCIO ---
 
-    public String getCedula() {
-        return cedula;
+    public void cargarNotificaciones() throws SQLException {
+        NotificacionDAO notificacionDAO = new NotificacionDAO();
+        this.notificaciones = notificacionDAO.obtenerPorUsuario(this.idUsuario);
     }
 
-    public void setCedula(String cedula) {
-        this.cedula = cedula;
-    }
+    // --- GETTERS Y SETTERS ---
 
-    public String getNombres() {
-        return nombres;
-    }
+    public String getCedula() { return cedula; }
+    public void setCedula(String cedula) { this.cedula = cedula; }
 
-    public void setNombres(String nombres) {
-        this.nombres = nombres;
-    }
+    public String getNombres() { return nombres; }
+    public void setNombres(String nombres) { this.nombres = nombres; }
 
-    public String getApellidos() {
-        return apellidos;
-    }
+    public String getApellidos() { return apellidos; }
+    public void setApellidos(String apellidos) { this.apellidos = apellidos; }
 
-    public void setApellidos(String apellidos) {
-        this.apellidos = apellidos;
-    }
+    public String getCorreo() { return correo; }
+    public void setCorreo(String correo) { this.correo = correo; }
 
-    public String getCorreo() {
-        return correo;
-    }
+    public int getIdUsuario() { return idUsuario; }
+    public void setIdUsuario(int idUsuario) { this.idUsuario = idUsuario; }
 
-    public void setCorreo(String correo) {
-        this.correo = correo;
-    }
+    public int getIdProyecto() { return idProyecto; }
+    public void setIdProyecto(int idProyecto) { this.idProyecto = idProyecto; }
 
-    public int getIdUsuario() {
-        return idUsuario;
-    }
-
-    public void setIdUsuario(int idUsuario) {
-        this.idUsuario = idUsuario;
-    }
+    public List<Notificacion> getNotificaciones() { return notificaciones; }
+    public void setNotificaciones(List<Notificacion> notificaciones) { this.notificaciones = notificaciones; }
 
     public String getNombresCompletos() {
         return nombres + " " + apellidos;
@@ -69,7 +65,7 @@ public abstract class PersonalDeInvestigacion {
 
     @Override
     public String toString() {
-        return "Integrante{" +
+        return "Personal{" +
                 "cedula='" + cedula + '\'' +
                 ", nombres='" + getNombresCompletos() + '\'' +
                 ", tipo='" + this.getClass().getSimpleName() + '\'' +

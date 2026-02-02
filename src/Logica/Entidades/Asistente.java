@@ -2,7 +2,7 @@ package Logica.Entidades;
 
 public class Asistente extends PersonalDeInvestigacion {
 
-    public Asistente() {
+    public Asistente() { super(); }
 
-    }
+
 }

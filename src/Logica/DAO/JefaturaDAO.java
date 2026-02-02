@@ -17,8 +17,7 @@ public class JefaturaDAO {
 
     public List<Jefatura> obtenerTodos() throws SQLException {
         List<Jefatura> jefaturas = new ArrayList<>();
-        String sql = "SELECT * FROM Jefatura ORDER BY apellidos, nombres";
-
+        String sql = "SELECT * FROM public.jefatura ORDER BY apellidos, nombres";
 
         try (Statement stmt = connection.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
@@ -30,8 +29,7 @@ public class JefaturaDAO {
     }
 
     public Jefatura obtenerPorCedula(String cedula) throws SQLException {
-        String sql = "SELECT * FROM Jefatura WHERE cedula = ?";
-
+        String sql = "SELECT * FROM public.jefatura WHERE cedula = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, cedula);
             ResultSet rs = stmt.executeQuery();
@@ -43,8 +41,7 @@ public class JefaturaDAO {
     }
 
     public Jefatura obtenerPorIdUsuario(int idUsuario) throws SQLException {
-        String sql = "SELECT * FROM Jefatura WHERE id_usuario = ?";
-
+        String sql = "SELECT * FROM public.jefatura WHERE id_usuario = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setInt(1, idUsuario);
             ResultSet rs = stmt.executeQuery();
@@ -56,35 +53,30 @@ public class JefaturaDAO {
     }
 
     public boolean guardar(Jefatura jefatura) throws SQLException {
-        String sql = "INSERT INTO Jefatura (cedula, id_usuario, nombres, apellidos, correo) VALUES (?, ?, ?, ?, ?)";
-
+        String sql = "INSERT INTO public.jefatura (cedula, id_usuario, nombres, apellidos, correo) VALUES (?, ?, ?, ?, ?)";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, jefatura.getCedula());
             stmt.setInt(2, jefatura.getIdUsuario());
             stmt.setString(3, jefatura.getNombres());
             stmt.setString(4, jefatura.getApellidos());
             stmt.setString(5, jefatura.getCorreo());
-
             return stmt.executeUpdate() > 0;
         }
     }
 
     public boolean actualizar(Jefatura jefatura) throws SQLException {
-        String sql = "UPDATE Jefatura SET nombres = ?, apellidos = ?, correo = ? WHERE cedula = ?";
-
+        String sql = "UPDATE public.jefatura SET nombres = ?, apellidos = ?, correo = ? WHERE cedula = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, jefatura.getNombres());
             stmt.setString(2, jefatura.getApellidos());
             stmt.setString(3, jefatura.getCorreo());
-            // El WHERE usa la Cédula (PK)
             stmt.setString(4, jefatura.getCedula());
-
             return stmt.executeUpdate() > 0;
         }
     }
 
     public boolean eliminar(String cedula) throws SQLException {
-        String sql = "DELETE FROM Jefatura WHERE cedula = ?";
+        String sql = "DELETE FROM public.jefatura WHERE cedula = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, cedula);
             return stmt.executeUpdate() > 0;
@@ -98,7 +90,6 @@ public class JefaturaDAO {
         jefatura.setApellidos(rs.getString("apellidos"));
         jefatura.setIdUsuario(rs.getInt("id_usuario"));
         jefatura.setCorreo(rs.getString("correo"));
-
         return jefatura;
     }
 }

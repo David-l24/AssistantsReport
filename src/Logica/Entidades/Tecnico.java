@@ -1,6 +1,7 @@
 package Logica.Entidades;
 
 public class Tecnico extends PersonalDeInvestigacion {
-    public Tecnico() {
-    }
+
+    public Tecnico() { super(); }
+
 }

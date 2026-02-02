@@ -27,10 +27,7 @@ public class ResumenSeguimiento {
     public ResumenSeguimiento() {
     }
 
-    /**
-     * Realiza la sumatoria de los tres tipos de personal
-     * y determina si se cumple el plan.
-     */
+
     public void calcularTotales() {
         // 1. Calcular Total Planificado (Suma de lo requerido en el Proyecto)
         this.totalPlanificado = cantidadAsistentesPlanificados +

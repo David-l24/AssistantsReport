@@ -41,6 +41,7 @@ package "Logica.Entidades" {
         - nombres: String
         - apellidos: String
         - correo: String
+        - informeActividades[] : InformeActividades
 
         + iniciarInformeActividades()
         + editarInformeActividades()
@@ -113,7 +114,7 @@ package "Logica.Entidades" {
         + calcularDuracion(): int
     }
 
-    class InformeActividad {
+    class InformeActividades {
         - id: int
         - fechaRegistro: LocalDate
         - descripcionActividades: String
@@ -150,10 +151,9 @@ package "Logica.Entidades" {
     }
 
     class Asistente {}
-    class Ayudante {
-        - carrera: String
-        - nivelSemestre: Integer
-    }
+
+    class Ayudante {}
+
     class Tecnico {}
 
     enum EstadoProyecto {
@@ -202,8 +202,8 @@ Proyecto --> ResumenSeguimiento
 
 ' [NUEVO] Relacion Participacion -> Informe
 ' Una Participacion tiene muchos informes de actividades
-PersonalDeInvestigacion --> InformeActividad
-InformeActividad --> EstadoReporte
+PersonalDeInvestigacion --> InformeActividades
+InformeActividades --> EstadoReporte
 
 ' Personal y Participacion
 PersonalDeInvestigacion --> Participacion
@@ -211,7 +211,7 @@ Participacion --> EstadoParticipacion
 
 ' Director gestiona Personal
 Director --> PersonalDeInvestigacion
-Director ..> InformeActividad
+Director ..> InformeActividades
 
 ' Herencia Personal
 Ayudante --|> PersonalDeInvestigacion

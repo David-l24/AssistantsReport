@@ -14,11 +14,14 @@ public abstract class PersonalDeInvestigacion {
     private String apellidos;
     private String correo;
 
+    private List<InformeActividades> informesActividades;
+
     // Cambiado a protected para acceso en herencia si fuera necesario
     protected List<Notificacion> notificaciones;
 
     public PersonalDeInvestigacion() {
         this.notificaciones = new ArrayList<>();
+        this.informesActividades = new ArrayList<>();
     }
 
     public PersonalDeInvestigacion(String cedula, String nombres, String apellidos, String correo) {
@@ -27,16 +30,25 @@ public abstract class PersonalDeInvestigacion {
         this.apellidos = apellidos;
         this.correo = correo;
         this.notificaciones = new ArrayList<>();
+        this.informesActividades = new ArrayList<>();
     }
 
-    // --- LÓGICA DE NEGOCIO ---
+    // LÓGICA DE NEGOCIO
 
     public void cargarNotificaciones() throws SQLException {
         NotificacionDAO notificacionDAO = new NotificacionDAO();
         this.notificaciones = notificacionDAO.obtenerPorUsuario(this.idUsuario);
     }
 
-    // --- GETTERS Y SETTERS ---
+    public void agregarInforme(InformeActividades informeActividades) {
+        if (!this.informesActividades.contains(informeActividades)) {
+            this.informesActividades.add(informeActividades);
+            // Establecemos la relación bidireccional
+            informeActividades.setPersonalDeInvestigacion(this);
+        }
+    }
+
+    // GETTERS Y SETTERS
 
     public String getCedula() { return cedula; }
     public void setCedula(String cedula) { this.cedula = cedula; }
@@ -59,6 +71,13 @@ public abstract class PersonalDeInvestigacion {
     public List<Notificacion> getNotificaciones() { return notificaciones; }
     public void setNotificaciones(List<Notificacion> notificaciones) { this.notificaciones = notificaciones; }
 
+
+    public List<InformeActividades> getInformesActividades() { return informesActividades; }
+
+    public void setInformesActividades(List<InformeActividades> informesActividades) {
+        this.informesActividades = informesActividades;
+    }
+
     public String getNombresCompletos() {
         return nombres + " " + apellidos;
     }
@@ -68,6 +87,7 @@ public abstract class PersonalDeInvestigacion {
         return "Personal{" +
                 "cedula='" + cedula + '\'' +
                 ", nombres='" + getNombresCompletos() + '\'' +
+                ", numInformes=" + (informesActividades != null ? informesActividades.size() : 0) +
                 ", tipo='" + this.getClass().getSimpleName() + '\'' +
                 '}';
     }

@@ -1,64 +1,28 @@
-import Lógica.DAO.ReporteAyudantesDAO;
-import Lógica.Entidades.ReporteAyudantes;
-import Lógica.Entidades.EstadoReporte;
-
-import java.time.LocalDateTime;
-import java.sql.SQLException;
-import java.util.List;
+import org.mindrot.jbcrypt.BCrypt;
 
 public class Main {
-
     public static void main(String[] args) {
 
-        try {
-            ReporteAyudantesDAO dao = new ReporteAyudantesDAO();
 
-            // 🔹 1. CREAR REPORTE
-            ReporteAyudantes nuevo = new ReporteAyudantes();
-            nuevo.setPeriodoAcademicoId("2025B");
-            nuevo.setProyectoId("PROY001");
-            nuevo.setEstado(EstadoReporte.EN_EDICION);
-            nuevo.setFechaCreacion(LocalDateTime.now());
-            nuevo.setFechaCierre(null);
+        String passwordOriginal = "miPasswordSeguro123";
 
-            dao.guardar(nuevo);
-            System.out.println("✅ Reporte creado con ID: " + nuevo.getId());
+        // 1. HASHEAR: Se genera un salt automático y se aplica el hash
+        // El segundo parámetro (log_rounds) define la complejidad (default es 10)
+        String hashed = BCrypt.hashpw(passwordOriginal, BCrypt.gensalt(12));
 
-            // 🔹 2. BUSCAR POR ID
-            ReporteAyudantes encontrado = dao.buscarPorId(nuevo.getId());
-            if (encontrado != null) {
-                System.out.println("📌 Reporte encontrado:");
-                System.out.println("ID: " + encontrado.getId());
-                System.out.println("Periodo: " + encontrado.getPeriodoAcademicoId());
-                System.out.println("Proyecto: " + encontrado.getProyectoId());
-                System.out.println("Estado: " + encontrado.getEstado());
-                System.out.println("Creado: " + encontrado.getFechaCreacion());
-            }
+        System.out.println("Password Original: " + passwordOriginal);
+        System.out.println("Hash generado: " + hashed);
 
-            // 🔹 3. ACTUALIZAR ESTADO
-            dao.actualizarEstado(nuevo.getId(), EstadoReporte.CERRADO);
-            System.out.println("🔄 Estado actualizado a CERRADO");
+        // 2. VERIFICAR: Comprobamos si las contraseñas coinciden
+        String passwordPrueba = "miPasswordSeguro123";
+        String passwordErroneo = "passwordIncorrecto";
 
-            // 🔹 4. CERRAR REPORTE (fecha + estado)
-            dao.cerrarReporte(nuevo.getId());
-            System.out.println("🔒 Reporte cerrado");
+        boolean esCorrecto = BCrypt.checkpw(passwordPrueba, hashed);
+        boolean esIncorrecto = BCrypt.checkpw(passwordErroneo, hashed);
 
-            // 🔹 5. LISTAR TODOS
-            System.out.println("\n📋 LISTA DE REPORTES:");
-            List<ReporteAyudantes> reportes = dao.obtenerTodos();
-            for (ReporteAyudantes r : reportes) {
-                System.out.println(
-                        r.getId() + " | " +
-                                r.getPeriodoAcademicoId() + " | " +
-                                r.getProyectoId() + " | " +
-                                r.getEstado()
-                );
-            }
+        System.out.println("\n--- Resultados de la verificación ---");
+        System.out.println("¿Coincide '" + passwordPrueba + "'?: " + esCorrecto);
+        System.out.println("¿Coincide '" + passwordErroneo + "'?: " + esIncorrecto);
 
-            dao.cerrarConexion();
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
     }
 }

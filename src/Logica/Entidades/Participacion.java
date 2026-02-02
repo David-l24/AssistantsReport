@@ -21,7 +21,6 @@ public class Participacion {
 
     }
 
-
     public Participacion(PersonalDeInvestigacion personal, LocalDate fechaInicio, LocalDate fechaFin, EstadoParticipacion estado) {
         this.personal = personal;
         this.fechaInicio = fechaInicio;
@@ -30,11 +29,15 @@ public class Participacion {
     }
 
 
-
     public boolean esActivo() {
         return this.estado == EstadoParticipacion.ACTIVO;
     }
-
+    public boolean esRetirado() {
+        return this.estado == EstadoParticipacion.RETIRADO;
+    }
+    public boolean esFinalizado() {
+        return this.estado == EstadoParticipacion.FINALIZADO;
+    }
 
     // Registra la baja de un integrante.
     // Actualiza el objeto y llama a la BD.

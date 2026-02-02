@@ -1,8 +1,10 @@
 package Logica.DAO;
 
 import Logica.Conexiones.ConexionBD;
-import Logica.Entidades.Reporte;
+import Logica.Entidades.*;
 import Logica.Enumeraciones.EstadoReporte;
+import Logica.Enumeraciones.EstadoParticipacion;
+
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,21 +16,23 @@ public class ReporteDAO {
         this.connection = ConexionBD.conectar();
     }
 
+    // ==========================================
+    // SECCIÓN 1: CRUD BÁSICO DE LA TABLA REPORTE
+    // ==========================================
+
     public List<Reporte> obtenerTodos() throws SQLException {
         List<Reporte> reportes = new ArrayList<>();
-        // Ordenamos por fecha_inicio descendente
         String sql = "SELECT * FROM reporte ORDER BY fecha_inicio DESC";
 
         try (Statement stmt = connection.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
-                reportes.add(mapResultSet(rs));
+                reportes.add(mapResultSetReporte(rs));
             }
         }
         return reportes;
     }
 
-    // OJO: idProyecto ahora es int
     public List<Reporte> obtenerPorProyecto(int idProyecto) throws SQLException {
         List<Reporte> reportes = new ArrayList<>();
         String sql = "SELECT * FROM reporte WHERE id_proyecto = ? ORDER BY fecha_inicio DESC";
@@ -37,7 +41,7 @@ public class ReporteDAO {
             stmt.setInt(1, idProyecto);
             ResultSet rs = stmt.executeQuery();
             while (rs.next()) {
-                reportes.add(mapResultSet(rs));
+                reportes.add(mapResultSetReporte(rs));
             }
         }
         return reportes;
@@ -50,24 +54,21 @@ public class ReporteDAO {
             stmt.setInt(1, idReporte);
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
-                return mapResultSet(rs);
+                return mapResultSetReporte(rs);
             }
         }
         return null;
     }
 
     public int guardar(Reporte reporte) throws SQLException {
-        // Insertamos en 'reporte'. No incluimos id_reporte (es serial).
-        // Usamos setString para el estado porque la columna es varchar(50).
         String sql = "INSERT INTO reporte (periodo_academico, id_proyecto, estado, fecha_inicio, fecha_cierre) " +
                 "VALUES (?, ?, ?, ?, ?) RETURNING id_reporte";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, reporte.getPeriodoAcademico());
             stmt.setInt(2, reporte.getIdProyecto());
-            stmt.setString(3, reporte.getEstado().name());
+            stmt.setString(3, reporte.getEstado().name()); // Enum a String
 
-            // Conversión LocalDate -> java.sql.Date
             if (reporte.getFechaInicio() != null) {
                 stmt.setDate(4, Date.valueOf(reporte.getFechaInicio()));
             } else {
@@ -82,7 +83,9 @@ public class ReporteDAO {
 
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
-                return rs.getInt(1);
+                int id = rs.getInt(1);
+                reporte.setIdReporte(id);
+                return id;
             }
         }
         return -1;
@@ -108,39 +111,153 @@ public class ReporteDAO {
     }
 
     public boolean eliminar(int idReporte) throws SQLException {
-        String sql = "DELETE FROM reporte WHERE id_reporte = ?";
+        // Primero vaciamos la tabla intermedia para evitar error de FK
+        vaciarParticipacionesDelReporte(idReporte);
 
+        String sql = "DELETE FROM reporte WHERE id_reporte = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setInt(1, idReporte);
             return stmt.executeUpdate() > 0;
         }
     }
 
-    private Reporte mapResultSet(ResultSet rs) throws SQLException {
-        Reporte reporte = new Reporte();
+    // ============================================================
+    // SECCIÓN 2: GESTIÓN DE LA TABLA INTERMEDIA (REPORTE_PARTICIPACION)
+    // ============================================================
 
-        // Mapeo exacto con los nombres de la imagen BD
+    /**
+     * Vincula una participación existente a este reporte.
+     */
+    public boolean agregarParticipacion(int idReporte, int idParticipacion) throws SQLException {
+        String sql = "INSERT INTO reporte_participacion (id_reporte, id_participacion) VALUES (?, ?)";
+
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setInt(1, idReporte);
+            stmt.setInt(2, idParticipacion);
+            return stmt.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * Elimina una participación específica de este reporte.
+     */
+    public boolean quitarParticipacion(int idReporte, int idParticipacion) throws SQLException {
+        String sql = "DELETE FROM reporte_participacion WHERE id_reporte = ? AND id_participacion = ?";
+
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setInt(1, idReporte);
+            stmt.setInt(2, idParticipacion);
+            return stmt.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * Elimina todas las participaciones de un reporte (limpieza).
+     */
+    private boolean vaciarParticipacionesDelReporte(int idReporte) throws SQLException {
+        String sql = "DELETE FROM reporte_participacion WHERE id_reporte = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setInt(1, idReporte);
+            return stmt.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * Carga la lista completa de objetos Participacion (con sus datos de Personal)
+     * asociados a un reporte y la asigna al objeto Reporte.
+     */
+    public void cargarParticipacionesDelReporte(Reporte reporte) throws SQLException {
+        if (reporte == null) return;
+
+        List<Participacion> lista = new ArrayList<>();
+
+        // JOIN TRIPLE: reporte_participacion -> participacion -> integrante
+        String sql = "SELECT p.*, i.cedula, i.nombres, i.apellidos, i.correo, i.tipo " +
+                "FROM reporte_participacion rp " +
+                "JOIN participacion p ON rp.id_participacion = p.id_participacion " +
+                "JOIN integrante i ON p.cedula_personal = i.cedula " +
+                "WHERE rp.id_reporte = ? " +
+                "ORDER BY i.apellidos, i.nombres";
+
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setInt(1, reporte.getIdReporte());
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                lista.add(mapResultSetParticipacionCompleta(rs));
+            }
+        }
+
+        reporte.setParticipacionesIncluidas(lista);
+    }
+
+
+    // ==========================================
+    // SECCIÓN 3: MAPEOS (MAPPERS)
+    // ==========================================
+
+    private Reporte mapResultSetReporte(ResultSet rs) throws SQLException {
+        Reporte reporte = new Reporte();
         reporte.setIdReporte(rs.getInt("id_reporte"));
         reporte.setPeriodoAcademico(rs.getString("periodo_academico"));
         reporte.setIdProyecto(rs.getInt("id_proyecto"));
 
-        // Convertimos String de BD a Enum
         String estadoStr = rs.getString("estado");
         if (estadoStr != null) {
             reporte.setEstado(EstadoReporte.fromString(estadoStr));
         }
 
-        // Convertimos java.sql.Date a LocalDate
         Date fechaInicio = rs.getDate("fecha_inicio");
-        if (fechaInicio != null) {
-            reporte.setFechaInicio(fechaInicio.toLocalDate());
-        }
+        if (fechaInicio != null) reporte.setFechaInicio(fechaInicio.toLocalDate());
 
         Date fechaCierre = rs.getDate("fecha_cierre");
-        if (fechaCierre != null) {
-            reporte.setFechaCierre(fechaCierre.toLocalDate());
-        }
+        if (fechaCierre != null) reporte.setFechaCierre(fechaCierre.toLocalDate());
 
         return reporte;
+    }
+
+    // Mapeo auxiliar para reconstruir la Participación completa con su Personal
+    private Participacion mapResultSetParticipacionCompleta(ResultSet rs) throws SQLException {
+        Participacion p = new Participacion();
+        p.setIdParticipacion(rs.getInt("id_participacion"));
+
+        // 1. Reconstruir Personal (Factory)
+        String tipo = rs.getString("tipo");
+        if (tipo == null) tipo = "";
+
+        PersonalDeInvestigacion personal;
+        if ("AYUDANTE".equalsIgnoreCase(tipo)) {
+            personal = new Ayudante();
+        } else if ("ASISTENTE".equalsIgnoreCase(tipo)) {
+            personal = new Asistente();
+        } else if ("TECNICO".equalsIgnoreCase(tipo)) {
+            personal = new Tecnico();
+        } else {
+            personal = new Ayudante(); // Default
+        }
+
+        personal.setCedula(rs.getString("cedula"));
+        personal.setNombres(rs.getString("nombres"));
+        personal.setApellidos(rs.getString("apellidos"));
+        personal.setCorreo(rs.getString("correo"));
+
+        p.setPersonal(personal);
+
+        // 2. Datos de Participación
+        Date fi = rs.getDate("fecha_inicio");
+        if (fi != null) p.setFechaInicio(fi.toLocalDate());
+
+        Date ff = rs.getDate("fecha_fin");
+        if (ff != null) p.setFechaFin(ff.toLocalDate());
+
+        Date fr = rs.getDate("fecha_retiro");
+        if (fr != null) p.setFechaRetiro(fr.toLocalDate());
+
+        p.setMotivoRetiro(rs.getString("motivo_retiro"));
+
+        String est = rs.getString("estado");
+        if (est != null) p.setEstado(EstadoParticipacion.valueOf(est));
+
+        return p;
     }
 }

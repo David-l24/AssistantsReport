@@ -1,4 +1,9 @@
 package Logica.Entidades;
+import Logica.DAO.*;
+import Logica.Enumeraciones.EstadoProyecto;
+import Logica.Enumeraciones.EstadoReporte;
+import java.sql.SQLException;
+import java.util.List;
 
 public class Jefatura {
 
@@ -63,23 +68,52 @@ public class Jefatura {
 
     //RESTO FUNCIONES
 
-    public void registrarProyecto(){
+    /**
+     * Registra un nuevo proyecto en la base de datos.
+     */
+    public void registrarProyecto(Proyecto proyecto) throws SQLException {
+        ProyectoDAO proyectoDAO = new ProyectoDAO();
+        proyectoDAO.guardar(proyecto);
+    }
+    //Revisar este método ya que se supone que un proyecto se debe crear con más datos
 
+    /**
+     * Actualiza el estado de un proyecto existente.
+     */
+    public void actualizarEstadoProyecto(Proyecto proyecto, EstadoProyecto nuevoEstado) throws SQLException {
+        ProyectoDAO proyectoDAO = new ProyectoDAO();
+
+        proyecto.setEstado(nuevoEstado);
+        proyectoDAO.actualizar(proyecto);
     }
 
-    public void actualizarEstadoProyecto() {
-
+    /**
+     * Obtiene todos los reportes semestrales para revisión.
+     */
+    public List<Reporte> revisarReportes() throws SQLException {
+        ReporteDAO reporteDAO = new ReporteDAO();
+        return reporteDAO.obtenerTodos();
     }
 
-    public void revisasReportes() {
+    /**
+     * Aprueba un reporte semestral.
+     */
+    public void aprobarReporte(Reporte reporte) throws SQLException {
+        ReporteDAO reporteDAO = new ReporteDAO();
 
+        if (reporte.getEstado() == EstadoReporte.CERRADO) {
+            reporte.setEstado(EstadoReporte.APROBADO);
+            reporteDAO.actualizar(reporte);
+        } else {
+            throw new SQLException("Solo se pueden aprobar reportes cerrados.");
+        }
     }
 
-    public void aprobarReportes() {
-
-    }
-
-    public void revisarInformesDeActividades() {
-
+    /**
+     * Obtiene un informe de actividades específico para revisión.
+     */
+    public InformeActividades revisarInformeDeActividades(int idInforme) throws SQLException {
+        InformeActividadesDAO informeDAO = new InformeActividadesDAO();
+        return informeDAO.obtenerPorId(idInforme);
     }
 }

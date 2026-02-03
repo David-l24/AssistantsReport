@@ -1,5 +1,6 @@
 package interfaz.director;
 
+import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.*;
 
 import Logica.Entidades.*;
@@ -61,10 +62,14 @@ public class PantallaPrincipalDirector extends VBox {
     }
 
     private void mostrar(Pane modulo) {
+        ScrollPane scrollPane = new ScrollPane(modulo);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
+
         if (!contenedorPrincipal.getChildren().isEmpty()) {
-            contenedorPrincipal.getChildren().set(0, modulo);
+            contenedorPrincipal.getChildren().set(0, scrollPane);
         }
-        VBox.setVgrow(modulo, Priority.ALWAYS);
+        VBox.setVgrow(scrollPane, Priority.ALWAYS);
         barra.getPanelNotificaciones().setVisible(false);
     }
 

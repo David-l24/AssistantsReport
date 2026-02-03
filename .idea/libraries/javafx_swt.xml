@@ -3,7 +3,6 @@
     <CLASSES>
       <root url="jar://$PROJECT_DIR$/postgresql-42.7.7.jar!/" />
       <root url="jar://$PROJECT_DIR$/jbcrypt-0.4.jar!/" />
-      <root url="jar://$PROJECT_DIR$/javafx-sdk-25.0.2/lib/javafx-swt.jar!/" />
       <root url="jar://$PROJECT_DIR$/javafx-sdk-25.0.2/lib/javafx.base.jar!/" />
       <root url="jar://$PROJECT_DIR$/javafx-sdk-25.0.2/lib/javafx.controls.jar!/" />
       <root url="jar://$PROJECT_DIR$/javafx-sdk-25.0.2/lib/javafx.fxml.jar!/" />

@@ -275,4 +275,23 @@ public class ProyectoDAO {
         }
         return null;
     }
+
+    public boolean actualizarEstado(Proyecto proyecto) throws SQLException {
+        String sql = "UPDATE Proyecto SET nombre = ?, periodo_inicio = ?, duracion_meses = ?, " +
+                "estado = ?, num_asistentes_planificados = ?, num_ayudantes_planificados = ?, " +
+                "num_tecnico_planificados = ? WHERE codigo_proyecto = ?";
+
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setString(1, proyecto.getNombre());
+            stmt.setString(2, proyecto.getPeriodoInicio().getCodigo());
+            stmt.setInt(3, proyecto.getDuracionMeses());
+            stmt.setString(4, proyecto.getEstado().name());
+            stmt.setInt(5, proyecto.getNumAsistentesPlanificados());
+            stmt.setInt(6, proyecto.getNumAyudantesPlanificados());
+            stmt.setInt(7, proyecto.getNumTecnicosPlanificados());
+            stmt.setString(8, proyecto.getCodigoProyecto());
+
+            return stmt.executeUpdate() > 0;
+        }
+    }
 }

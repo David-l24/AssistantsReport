@@ -6,6 +6,7 @@ import Logica.Enumeraciones.EstadoReporte;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -140,6 +141,7 @@ public class Director {
 
         Notificacion notif = new Notificacion();
         notif.setIdUsuario(idUsuarioJefatura);
+        notif.setFecha(LocalDateTime.now());
         notif.setContenido("El director " + this.getNombresCompletos() +
                 " ha enviado un reporte para revisión.");
         notifDAO.guardar(notif);

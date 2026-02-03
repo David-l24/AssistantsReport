@@ -2,9 +2,11 @@ package Logica.Entidades;
 
 import Logica.DAO.NotificacionDAO;
 import Logica.Enumeraciones.EstadoInforme;
+import javafx.util.converter.LocalDateTimeStringConverter;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -72,7 +74,10 @@ public class InformeActividades {
         NotificacionDAO notifDAO = new NotificacionDAO();
         Notificacion notif = new Notificacion();
         notif.setIdUsuario(personalDeInvestigacion.getIdUsuario());
+        notif.setFecha(LocalDateTime.now());
         notif.setContenido("Su informe de actividades ha sido aprobado.");
+        System.out.println(notif);
+        System.out.println(personalDeInvestigacion);
         notifDAO.guardar(notif);
     }
 
@@ -90,6 +95,7 @@ public class InformeActividades {
         NotificacionDAO notifDAO = new NotificacionDAO();
         Notificacion notif = new Notificacion();
         notif.setIdUsuario(personalDeInvestigacion.getIdUsuario());
+        notif.setFecha(LocalDateTime.now());
         notif.setContenido("Su informe de actividades ha sido rechazado. Motivo: " + motivo);
         notifDAO.guardar(notif);
     }

@@ -113,15 +113,106 @@ public class InformeActividadesDAO {
     }
 
     /**
-     * Actualiza el estado de un informe
+     * Actualiza una semana existente
      */
-    public boolean actualizar(InformeActividades informe) throws SQLException {
-        String sql = "UPDATE informe_actividades SET estado = ? WHERE id_informe = ?";
+    private void actualizarSemana(SemanaActividades semana) throws SQLException {
+        String sql = "UPDATE semana_actividades SET " +
+                "nro_semana = ?, fechas = ?, horas_inicio = ?, horas_salida = ?, " +
+                "actividad_semanal = ?, observaciones = ? WHERE id = ?";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setString(1, informe.getEstado().name());
-            stmt.setInt(2, informe.getIdInforme());
-            return stmt.executeUpdate() > 0;
+            stmt.setInt(1, semana.getNumeroSemana());
+
+            // Convertir arrays para PostgreSQL
+            java.util.Date[] utilDates = semana.getFechas();
+            java.sql.Date[] sqlDates = new java.sql.Date[utilDates.length];
+            for (int i = 0; i < utilDates.length; i++) {
+                if (utilDates[i] != null) {
+                    sqlDates[i] = new java.sql.Date(utilDates[i].getTime());
+                }
+            }
+
+            stmt.setArray(2, connection.createArrayOf("DATE", sqlDates));
+            stmt.setArray(3, connection.createArrayOf("TIME", semana.getHorasInicio()));
+            stmt.setArray(4, connection.createArrayOf("TIME", semana.getHorasSalida()));
+            stmt.setString(5, semana.getActividadSemanal());
+            stmt.setString(6, semana.getObservaciones());
+            stmt.setInt(7, semana.getId());
+
+            stmt.executeUpdate();
+        }
+    }
+
+    /**
+     * Actualiza el informe completo: estado y semanas
+     */
+    public boolean actualizar(InformeActividades informe) throws SQLException {
+        boolean autoCommitOriginal = connection.getAutoCommit();
+
+        try {
+            connection.setAutoCommit(false);
+
+            // 1. Actualizar estado del informe
+            String sqlInforme = "UPDATE informe_actividades SET estado = ? WHERE id_informe = ?";
+            try (PreparedStatement stmt = connection.prepareStatement(sqlInforme)) {
+                stmt.setString(1, informe.getEstado().name());
+                stmt.setInt(2, informe.getIdInforme());
+                stmt.executeUpdate();
+            }
+
+            // 2. Obtener IDs de semanas actuales en BD
+            List<Integer> semanasExistentesIds = new ArrayList<>();
+            String sqlGetSemanas = "SELECT id_semana FROM informe_semana WHERE id_informe = ?";
+            try (PreparedStatement stmt = connection.prepareStatement(sqlGetSemanas)) {
+                stmt.setInt(1, informe.getIdInforme());
+                ResultSet rs = stmt.executeQuery();
+                while (rs.next()) {
+                    semanasExistentesIds.add(rs.getInt("id_semana"));
+                }
+            }
+
+            // 3. Actualizar o insertar cada semana
+            List<Integer> semanasActualizadas = new ArrayList<>();
+            for (SemanaActividades semana : informe.getSemanas()) {
+                if (semana.getId() > 0 && semanasExistentesIds.contains(semana.getId())) {
+                    // Actualizar semana existente
+                    actualizarSemana(semana);
+                    semanasActualizadas.add(semana.getId());
+                } else {
+                    // Insertar nueva semana
+                    guardarSemana(semana, informe.getIdInforme());
+                    semanasActualizadas.add(semana.getId());
+                }
+            }
+
+            // 4. Eliminar semanas que ya no están en el informe
+            for (Integer idSemanaExistente : semanasExistentesIds) {
+                if (!semanasActualizadas.contains(idSemanaExistente)) {
+                    // Eliminar relación
+                    String sqlDelRelacion = "DELETE FROM informe_semana WHERE id_informe = ? AND id_semana = ?";
+                    try (PreparedStatement stmt = connection.prepareStatement(sqlDelRelacion)) {
+                        stmt.setInt(1, informe.getIdInforme());
+                        stmt.setInt(2, idSemanaExistente);
+                        stmt.executeUpdate();
+                    }
+
+                    // Eliminar semana
+                    String sqlDelSemana = "DELETE FROM semana_actividades WHERE id = ?";
+                    try (PreparedStatement stmt = connection.prepareStatement(sqlDelSemana)) {
+                        stmt.setInt(1, idSemanaExistente);
+                        stmt.executeUpdate();
+                    }
+                }
+            }
+
+            connection.commit();
+            return true;
+
+        } catch (SQLException e) {
+            connection.rollback();
+            throw e;
+        } finally {
+            connection.setAutoCommit(autoCommitOriginal);
         }
     }
 
@@ -133,7 +224,7 @@ public class InformeActividadesDAO {
 
         // Primero obtener la cabecera
         String sqlCabecera = "SELECT i.*, " +
-                "p.cedula, p.nombres, p.apellidos, p.tipo, p.id_proyecto " +
+                "p.cedula, p.nombres, p.apellidos, p.tipo, p.id_proyecto, p.id_usuario " +
                 "FROM informe_actividades i " +
                 "JOIN personaldeinvestigacion p ON i.cedula_personal = p.cedula " +
                 "WHERE i.id_informe = ?";
@@ -150,6 +241,7 @@ public class InformeActividadesDAO {
 
                 // Crear personal
                 PersonalDeInvestigacion personal = crearPersonalPorTipo(rs.getString("tipo"));
+                personal.setIdUsuario(rs.getInt("id_usuario"));
                 personal.setCedula(rs.getString("cedula"));
                 personal.setNombres(rs.getString("nombres"));
                 personal.setApellidos(rs.getString("apellidos"));

@@ -5,6 +5,7 @@ import Logica.Enumeraciones.EstadoProyecto;
 import Logica.Enumeraciones.EstadoReporte;
 
 import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -58,6 +59,12 @@ public class Jefatura {
      * 4. Actualiza el estado del proyecto
      * 5. Envía notificación al director
      */
+
+    public void rechazarProyecto(Proyecto proyecto, EstadoProyecto nuevoEstado) throws SQLException {
+
+    }
+
+
     public void actualizarEstadoProyecto(Proyecto proyecto, EstadoProyecto nuevoEstado) throws SQLException {
         if (nuevoEstado == EstadoProyecto.APROBADO &&
                 proyecto.getEstado() == EstadoProyecto.EN_REVISION) {
@@ -109,7 +116,7 @@ public class Jefatura {
             // Para otros cambios de estado, solo actualizar
             proyecto.setEstado(nuevoEstado);
             ProyectoDAO proyectoDAO = new ProyectoDAO();
-            proyectoDAO.actualizar(proyecto);
+            proyectoDAO.actualizarEstado(proyecto);
         }
     }
 
@@ -149,6 +156,7 @@ public class Jefatura {
                 NotificacionDAO notifDAO = new NotificacionDAO();
                 Notificacion notif = new Notificacion();
                 notif.setIdUsuario(proyecto.getDirector().getIdUsuario());
+                notif.setFecha(LocalDateTime.now());
                 notif.setContenido("Su reporte del proyecto '" + proyecto.getNombre() +
                         "' ha sido aprobado por jefatura.");
                 notifDAO.guardar(notif);

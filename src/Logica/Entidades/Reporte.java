@@ -1,5 +1,6 @@
 package Logica.Entidades;
 
+import Logica.DAO.ReporteDAO;
 import Logica.Enumeraciones.EstadoReporte;
 
 import java.sql.SQLException;
@@ -97,6 +98,7 @@ public class Reporte {
 
     /**
      * Cierra el reporte y lo envía a jefatura
+     * IMPORTANTE: Ahora persiste el cambio en la base de datos
      */
     public void cerrarYEnviar() throws SQLException {
         if (this.estado != EstadoReporte.EN_EDICION) {
@@ -107,8 +109,13 @@ public class Reporte {
             throw new IllegalStateException("El reporte debe incluir al menos una participación");
         }
 
+        // Cambiar estado en memoria
         this.estado = EstadoReporte.CERRADO;
         this.fechaCierre = LocalDate.now();
+
+        // CRÍTICO: Persistir el cambio en la base de datos
+        ReporteDAO reporteDAO = new ReporteDAO();
+        reporteDAO.actualizar(this);
 
         // Notificar a jefatura (necesitarás obtener el id_usuario de jefatura de alguna forma)
         // Esto se puede mejorar con una tabla de configuración o búsqueda de usuarios con rol JEFATURA

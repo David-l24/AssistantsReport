@@ -191,6 +191,26 @@ public class ReporteDAO {
         reporte.setParticipacionesIncluidas(lista);
     }
 
+    /**
+     * Obtiene reportes por proyecto y periodo académico
+     * Útil para validar que no existan más de 2 reportes por periodo
+     */
+    public List<Reporte> obtenerPorProyectoYPeriodo(int idProyecto, String periodoAcademico)
+            throws SQLException {
+        List<Reporte> reportes = new ArrayList<>();
+        String sql = "SELECT * FROM reporte WHERE id_proyecto = ? AND periodo_academico = ?";
+
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setInt(1, idProyecto);
+            stmt.setString(2, periodoAcademico);
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                reportes.add(mapResultSetReporte(rs));
+            }
+        }
+        return reportes;
+    }
 
     // ==========================================
     // SECCIÓN 3: MAPEOS (MAPPERS)

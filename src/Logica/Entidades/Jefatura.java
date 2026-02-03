@@ -1,9 +1,6 @@
 package Logica.Entidades;
 
-import Logica.DAO.InformeActividadesDAO;
-import Logica.DAO.NotificacionDAO;
-import Logica.DAO.ProyectoDAO;
-import Logica.DAO.ReporteDAO;
+import Logica.DAO.*;
 import Logica.Enumeraciones.EstadoProyecto;
 import Logica.Enumeraciones.EstadoReporte;
 
@@ -39,10 +36,78 @@ public class Jefatura {
         proyectoDAO.guardar(proyecto);
     }
 
+    /**
+     * Actualiza el estado del proyecto y ejecuta las acciones correspondientes
+     * Cuando se aprueba un proyecto EN_REVISION:
+     * 1. Crea el usuario del director
+     * 2. Crea la entidad Director
+     * 3. Vincula el director al proyecto
+     * 4. Envía notificación
+     */
     public void actualizarEstadoProyecto(Proyecto proyecto, EstadoProyecto nuevoEstado) throws SQLException {
-        ProyectoDAO proyectoDAO = new ProyectoDAO();
-        proyecto.setEstado(nuevoEstado);
-        proyectoDAO.actualizar(proyecto);
+        if (nuevoEstado == EstadoProyecto.APROBADO &&
+                proyecto.getEstado() == EstadoProyecto.EN_REVISION) {
+
+            // Paso 1: Crear Usuario del director
+            UsuarioDAO usuarioDAO = new UsuarioDAO();
+            String username = generarUsernameDirector(proyecto);
+            String contrasenaDefecto = UsuarioDAO.generarContrasenaDefecto(proyecto.getDirector().getCedula());
+
+            Usuario usuarioDirector = new Usuario(username, contrasenaDefecto, "DIRECTOR");
+            int idUsuarioGenerado = usuarioDAO.guardar(usuarioDirector);
+
+            if (idUsuarioGenerado == -1) {
+                throw new SQLException("Error al crear usuario para el director");
+            }
+
+            // Paso 2: Crear entidad Director vinculada al usuario
+            DirectorDAO directorDAO = new DirectorDAO();
+            Director nuevoDirector = proyecto.getDirector();
+            nuevoDirector.setIdUsuario(idUsuarioGenerado);
+
+            boolean directorCreado = directorDAO.guardar(nuevoDirector);
+            if (!directorCreado) {
+                throw new SQLException("Error al crear el director");
+            }
+
+            // Paso 3: Actualizar el proyecto
+            proyecto.setEstado(nuevoEstado);
+            ProyectoDAO proyectoDAO = new ProyectoDAO();
+            proyectoDAO.actualizar(proyecto);
+
+            // Paso 4: Enviar notificación al director
+            NotificacionDAO notifDAO = new NotificacionDAO();
+            Notificacion notif = new Notificacion();
+            notif.setIdUsuario(idUsuarioGenerado);
+            notif.setContenido("Su proyecto '" + proyecto.getNombre() +
+                    "' ha sido aprobado. Usuario: " + username +
+                    ". Por favor, ingrese y cambie su contraseña.");
+            notifDAO.guardar(notif);
+
+        } else {
+            // Para otros cambios de estado, solo actualizar
+            proyecto.setEstado(nuevoEstado);
+            ProyectoDAO proyectoDAO = new ProyectoDAO();
+            proyectoDAO.actualizar(proyecto);
+        }
+    }
+
+    /**
+     * Genera el username para el director basado en datos del proyecto
+     * Ejemplo: "dir.proyecto123" o "dir.apellido"
+     */
+    private String generarUsernameDirector(Proyecto proyecto) {
+        String base = "dir." + proyecto.getCodigoProyecto();
+        return base.toLowerCase().replaceAll("[^a-z0-9.]", "");
+    }
+
+    /**
+     * Genera un resumen de seguimiento para un proyecto específico
+     * Compara lo planificado vs lo realmente registrado
+     */
+    public ResumenSeguimiento generarResumenSeguimiento(int idProyecto) throws SQLException {
+        ResumenSeguimientoDAO resumenDAO = new ResumenSeguimientoDAO();
+        return resumenDAO.generarResumen(idProyecto);
     }
 
     public List<Reporte> revisarReportes() throws SQLException {

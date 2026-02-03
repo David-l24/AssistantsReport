@@ -188,4 +188,19 @@ public class ProyectoDAO {
 
         return proyecto;
     }
+    /**
+     * Obtiene un proyecto por su ID
+     */
+    public Proyecto obtenerPorId(int idProyecto) throws SQLException {
+        String sql = "SELECT * FROM Proyecto WHERE id_proyecto = ?";
+
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setInt(1, idProyecto);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return mapResultSet(rs);
+            }
+        }
+        return null;
+    }
 }

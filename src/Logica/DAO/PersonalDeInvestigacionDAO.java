@@ -29,13 +29,6 @@ public class PersonalDeInvestigacionDAO {
     public List<PersonalDeInvestigacion> obtenerPorTipo(String tipo) throws SQLException {
         String sql = "SELECT * FROM public.personaldeinvestigacion WHERE tipo = ? ORDER BY apellidos, nombres";
 
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setString(1, tipo);
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                lista.add(mapResultSet(rs));
-            }
-        }
         // Nota: lista no estaba declarada dentro de este scope en el bloque anterior, corregido aquí:
         List<PersonalDeInvestigacion> lista = new ArrayList<>();
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {

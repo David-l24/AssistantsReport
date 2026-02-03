@@ -10,6 +10,45 @@ import java.util.List;
 
 public class UsuarioDAO {
 
+    /**
+     * Genera una contraseña por defecto basada en la cédula
+     * Formato: "Temporal@" + últimos 4 dígitos de cédula
+     *
+     * @param cedula Cédula del usuario (10 dígitos)
+     * @return Contraseña por defecto generada
+     */
+    public static String generarContrasenaDefecto(String cedula) {
+        if (cedula == null || cedula.length() < 4) {
+            return "Temporal@1234";
+        }
+        String ultimos4 = cedula.substring(cedula.length() - 4);
+        return "Temporal@" + ultimos4;
+    }
+
+    /**
+     * Verifica si la contraseña actual del usuario es la por defecto
+     * Útil para forzar cambio en primer login
+     *
+     * @param idUsuario ID del usuario a verificar
+     * @param cedula Cédula del usuario para generar la contraseña por defecto
+     * @return true si el usuario tiene la contraseña por defecto
+     */
+    public boolean tieneContrasenaDefecto(int idUsuario, String cedula) throws SQLException {
+        Usuario usuario = obtenerPorId(idUsuario);
+        if (usuario == null) return false;
+
+        String contrasenaDefecto = generarContrasenaDefecto(cedula);
+        // Comparar el hash guardado con la contraseña por defecto
+        return BCrypt.checkpw(contrasenaDefecto, usuario.getContrasena());
+    }
+
+    /**
+     * Autentica un usuario con username y contraseña
+     *
+     * @param username Nombre de usuario
+     * @param passwordPlana Contraseña en texto plano
+     * @return Usuario autenticado o null si falla
+     */
     public Usuario autenticar(String username, String passwordPlana) throws SQLException {
         Connection conn = null;
         PreparedStatement stmt = null;
@@ -24,10 +63,10 @@ public class UsuarioDAO {
             rs = stmt.executeQuery();
 
             if (rs.next()) {
-                // 2. Recuperamos el Hash almacenado en la BD
+                // Recuperamos el Hash almacenado en la BD
                 String hashGuardado = rs.getString("contrasena");
 
-                // 3. Validamos la contraseña plana contra el hash usando BCrypt
+                // Validamos la contraseña plana contra el hash usando BCrypt
                 if (BCrypt.checkpw(passwordPlana, hashGuardado)) {
                     // Si coincide, retornamos el usuario mapeado
                     return mapResultSetToUsuario(rs);
@@ -41,7 +80,13 @@ public class UsuarioDAO {
         }
     }
 
-
+    /**
+     * Guarda un nuevo usuario en la base de datos
+     * La contraseña se hashea automáticamente antes de guardar
+     *
+     * @param usuario Usuario a guardar
+     * @return ID del usuario generado, o -1 si falla
+     */
     public int guardar(Usuario usuario) throws SQLException {
         Connection conn = null;
         PreparedStatement stmt = null;
@@ -50,7 +95,7 @@ public class UsuarioDAO {
         try {
             conn = ConexionBD.conectar();
 
-            // 1. Hashear la contraseña antes de guardarla
+            // Hashear la contraseña antes de guardarla
             String hashPassword = BCrypt.hashpw(usuario.getContrasena(), BCrypt.gensalt());
 
             String sql = "INSERT INTO usuario (username, contrasena, rol, activo) " +
@@ -78,7 +123,14 @@ public class UsuarioDAO {
         }
     }
 
-
+    /**
+     * Cambia la contraseña de un usuario
+     * La nueva contraseña se hashea automáticamente
+     *
+     * @param idUsuario ID del usuario
+     * @param nuevaContrasena Nueva contraseña en texto plano
+     * @return true si se cambió exitosamente
+     */
     public boolean cambiarContrasena(int idUsuario, String nuevaContrasena) throws SQLException {
         Connection conn = null;
         PreparedStatement stmt = null;
@@ -102,8 +154,9 @@ public class UsuarioDAO {
         }
     }
 
-    // --- MÉTODOS SIN CAMBIOS LÓGICOS (Solo estructura) ---
-
+    /**
+     * Obtiene un usuario por su ID
+     */
     public Usuario obtenerPorId(int idUsuario) throws SQLException {
         Connection conn = null;
         PreparedStatement stmt = null;
@@ -122,6 +175,9 @@ public class UsuarioDAO {
         }
     }
 
+    /**
+     * Obtiene un usuario por su username
+     */
     public Usuario obtenerPorUsername(String username) throws SQLException {
         Connection conn = null;
         PreparedStatement stmt = null;
@@ -140,6 +196,9 @@ public class UsuarioDAO {
         }
     }
 
+    /**
+     * Obtiene todos los usuarios del sistema
+     */
     public List<Usuario> obtenerTodos() throws SQLException {
         List<Usuario> usuarios = new ArrayList<>();
         Connection conn = null;
@@ -158,8 +217,11 @@ public class UsuarioDAO {
         }
     }
 
+    /**
+     * Actualiza los datos de un usuario (NO toca la contraseña)
+     * Para cambiar contraseña, usar cambiarContrasena()
+     */
     public boolean actualizar(Usuario usuario) throws SQLException {
-        // Nota: Este método NO toca la contraseña
         Connection conn = null;
         PreparedStatement stmt = null;
 
@@ -177,6 +239,9 @@ public class UsuarioDAO {
         }
     }
 
+    /**
+     * Desactiva un usuario (eliminación lógica)
+     */
     public boolean eliminar(int idUsuario) throws SQLException {
         Connection conn = null;
         PreparedStatement stmt = null;
@@ -191,6 +256,9 @@ public class UsuarioDAO {
         }
     }
 
+    /**
+     * Mapea un ResultSet a un objeto Usuario
+     */
     private Usuario mapResultSetToUsuario(ResultSet rs) throws SQLException {
         Usuario usuario = new Usuario();
         usuario.setIdUsuario(rs.getInt("id_usuario"));
@@ -202,6 +270,9 @@ public class UsuarioDAO {
         return usuario;
     }
 
+    /**
+     * Cierra recursos de forma segura
+     */
     private void cerrarRecursos(ResultSet rs, Statement stmt, Connection conn) {
         if (rs != null) try { rs.close(); } catch (SQLException e) {}
         if (stmt != null) try { stmt.close(); } catch (SQLException e) {}

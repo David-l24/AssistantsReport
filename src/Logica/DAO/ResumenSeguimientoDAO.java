@@ -1,12 +1,16 @@
 package Logica.DAO;
 
 import Logica.Conexiones.ConexionBD;
+import Logica.Entidades.Participacion;
+import Logica.Entidades.PersonalDeInvestigacion;
+import Logica.Entidades.Proyecto;
 import Logica.Entidades.ResumenSeguimiento;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.List;
 
 public class ResumenSeguimientoDAO {
 
@@ -21,17 +25,78 @@ public class ResumenSeguimientoDAO {
      * @param idProyecto El ID del proyecto a analizar.
      * @return Objeto ResumenSeguimiento con los datos calculados.
      */
+    /**
+     * Genera un resumen de seguimiento completo para un proyecto
+     * Compara datos planificados vs registrados y calcula cumplimiento
+     */
     public ResumenSeguimiento generarResumen(int idProyecto) throws SQLException {
         ResumenSeguimiento resumen = new ResumenSeguimiento();
 
-        // PASO 1: Obtener lo PLANIFICADO desde la tabla Proyecto
-        obtenerDatosPlanificados(idProyecto, resumen);
+        // Obtener el proyecto con sus datos planificados
+        ProyectoDAO proyectoDAO = new ProyectoDAO();
+        Proyecto proyecto = proyectoDAO.obtenerPorId(idProyecto);
 
-        // PASO 2: Obtener lo REGISTRADO (Real) desde las tablas Participacion y Personal
-        obtenerDatosReales(idProyecto, resumen);
+        if (proyecto == null) {
+            throw new SQLException("Proyecto no encontrado");
+        }
 
-        // PASO 3: Ejecutar cálculos finales en la entidad
+        // Cargar el personal del proyecto
+        proyectoDAO.cargarPersonalDelProyecto(proyecto);
+
+        // Contar personal planificado (del proyecto)
+        resumen.setCantidadAsistentesPlanificados(proyecto.getNumAsistentesPlanificados());
+        resumen.setCantidadAyudantesPlanificados(proyecto.getNumAyudantesPlanificados());
+        resumen.setCantidadTecnicosPlanificados(proyecto.getNumTecnicosPlanificados());
+
+        // Contar personal registrado (de la lista cargada)
+        int asistentesReg = 0, ayudantesReg = 0, tecnicosReg = 0;
+        int asistentesActivos = 0, ayudantesActivos = 0, tecnicosActivos = 0;
+        int asistentesRetirados = 0, ayudantesRetirados = 0, tecnicosRetirados = 0;
+
+        for (PersonalDeInvestigacion p : proyecto.getPersonalDeInvestigacion()) {
+            // Obtener participaciones de este personal
+            ParticipacionDAO partDAO = new ParticipacionDAO();
+            List<Participacion> participaciones = partDAO.obtenerPorPersonal(p.getCedula());
+
+            // Determinar estado actual
+            boolean esActivo = false, esRetirado = false;
+            for (Participacion part : participaciones) {
+                if (part.esActivo()) esActivo = true;
+                if (part.esRetirado()) esRetirado = true;
+            }
+
+            // Clasificar por tipo
+            String tipo = p.getTipo();
+            if ("Asistente".equalsIgnoreCase(tipo)) {
+                asistentesReg++;
+                if (esActivo) asistentesActivos++;
+                if (esRetirado) asistentesRetirados++;
+            } else if ("Ayudante".equalsIgnoreCase(tipo)) {
+                ayudantesReg++;
+                if (esActivo) ayudantesActivos++;
+                if (esRetirado) ayudantesRetirados++;
+            } else if ("Tecnico".equalsIgnoreCase(tipo)) {
+                tecnicosReg++;
+                if (esActivo) tecnicosActivos++;
+                if (esRetirado) tecnicosRetirados++;
+            }
+        }
+
+        resumen.setCantidadAsistentesRegistrados(asistentesReg);
+        resumen.setCantidadAyudantesRegistrados(ayudantesReg);
+        resumen.setCantidadTecnicosRegistrados(tecnicosReg);
+
+        resumen.setCantidadAsistentesActivos(asistentesActivos);
+        resumen.setCantidadAyudantesActivos(ayudantesActivos);
+        resumen.setCantidadTecnicosActivos(tecnicosActivos);
+
+        resumen.setCantidadAsistentesRetirados(asistentesRetirados);
+        resumen.setCantidadAyudantesRetirados(ayudantesRetirados);
+        resumen.setCantidadTecnicosRetirados(tecnicosRetirados);
+
+        // Calcular totales y cumplimiento
         resumen.calcularTotales();
+        resumen.verificarCumplimiento();
 
         return resumen;
     }

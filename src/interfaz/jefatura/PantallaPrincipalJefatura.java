@@ -78,11 +78,15 @@ public class PantallaPrincipalJefatura extends VBox {
      * Intercambia el contenido del panel central.
      */
     private void mostrar(Pane modulo) {
+        ScrollPane scrollPane = new ScrollPane(modulo);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
+
         // El primer hijo del stack es el contenedor base
         if (!contenedorPrincipal.getChildren().isEmpty()) {
-            contenedorPrincipal.getChildren().set(0, modulo);
+            contenedorPrincipal.getChildren().set(0, scrollPane);
         }
-        VBox.setVgrow(modulo, Priority.ALWAYS);
+        VBox.setVgrow(scrollPane, Priority.ALWAYS);
 
         // Cerrar panel notificaciones al cambiar de modulo
         barra.getPanelNotificaciones().setVisible(false);

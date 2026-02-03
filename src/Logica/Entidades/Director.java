@@ -1,6 +1,7 @@
 package Logica.Entidades;
 
 import Logica.DAO.*;
+import Logica.Enumeraciones.EstadoInforme;
 import Logica.Enumeraciones.EstadoParticipacion;
 import Logica.Enumeraciones.EstadoReporte;
 
@@ -31,9 +32,60 @@ public class Director {
 
     // --- LÓGICA DE NEGOCIO ---
 
-    public void registrarPersonalDeInvestigacion(PersonalDeInvestigacion personal) throws SQLException {
+    /**
+     * Registra nuevo personal de investigación en el proyecto
+     * Crea: Usuario, PersonalDeInvestigacion, Participacion inicial
+     * Envía notificación con credenciales
+     */
+    public void registrarPersonalDeInvestigacion(PersonalDeInvestigacion personal,
+                                                 int idProyecto,
+                                                 LocalDate fechaInicioParticipacion) throws SQLException {
+        // Paso 1: Crear Usuario
+        UsuarioDAO usuarioDAO = new UsuarioDAO();
+        String username = generarUsernamePersonal(personal);
+        String contrasenaDefecto = UsuarioDAO.generarContrasenaDefecto(personal.getCedula());
+
+        Usuario usuarioPersonal = new Usuario(username, contrasenaDefecto, "PERSONAL");
+        int idUsuarioGenerado = usuarioDAO.guardar(usuarioPersonal);
+
+        if (idUsuarioGenerado == -1) {
+            throw new SQLException("Error al crear usuario para el personal");
+        }
+
+        // Paso 2: Vincular usuario y proyecto al personal
+        personal.setIdUsuario(idUsuarioGenerado);
+        personal.setIdProyecto(idProyecto);
+
+        // Paso 3: Guardar Personal
         PersonalDeInvestigacionDAO personalDAO = new PersonalDeInvestigacionDAO();
         personalDAO.guardar(personal);
+
+        // Paso 4: Crear Participacion inicial
+        ParticipacionDAO participacionDAO = new ParticipacionDAO();
+        Participacion participacion = new Participacion();
+        participacion.setPersonal(personal);
+        participacion.setFechaInicio(fechaInicioParticipacion);
+        participacion.setEstado(EstadoParticipacion.ACTIVO);
+        participacionDAO.guardar(participacion);
+
+        // Paso 5: Notificar al personal
+        NotificacionDAO notifDAO = new NotificacionDAO();
+        Notificacion notif = new Notificacion();
+        notif.setIdUsuario(idUsuarioGenerado);
+        notif.setContenido("Ha sido registrado en el proyecto. Usuario: " + username +
+                ". Por favor, ingrese y cambie su contraseña.");
+        notifDAO.guardar(notif);
+    }
+
+    /**
+     * Genera username para personal
+     * Ejemplo: "pers.apellido123"
+     */
+    private String generarUsernamePersonal(PersonalDeInvestigacion personal) {
+        String apellido = personal.getApellidos().split(" ")[0]; // Primer apellido
+        String cedula = personal.getCedula().substring(personal.getCedula().length() - 3);
+        String base = "pers." + apellido + cedula;
+        return base.toLowerCase().replaceAll("[^a-z0-9.]", "");
     }
 
     public void registrarParticipacion(String cedulaPersonal, LocalDate fechaInicio) throws SQLException {
@@ -51,11 +103,64 @@ public class Director {
         participacionDAO.guardar(p);
     }
 
-    // Gestión de Reportes
+    /**
+     * Inicia un nuevo reporte para el periodo académico actual
+     * Valida que no existan ya 2 reportes para ese periodo
+     */
     public int iniciarReporte(String periodoAcademico, int idProyecto) throws SQLException {
         ReporteDAO reporteDAO = new ReporteDAO();
+
+        // Validar que no existan ya 2 reportes para este periodo y proyecto
+        List<Reporte> reportesExistentes = reporteDAO.obtenerPorProyectoYPeriodo(
+                idProyecto, periodoAcademico);
+
+        if (reportesExistentes.size() >= 2) {
+            throw new SQLException("Ya existen 2 reportes para este periodo académico. " +
+                    "No se pueden crear más.");
+        }
+
         Reporte reporte = new Reporte(periodoAcademico, idProyecto, EstadoReporte.EN_EDICION);
+        reporte.setFechaInicio(LocalDate.now());
+
         return reporteDAO.guardar(reporte);
+    }
+
+    /**
+     * Cierra y envía el reporte a jefatura
+     */
+    public void enviarReporte(Reporte reporte) throws SQLException {
+        ReporteDAO reporteDAO = new ReporteDAO();
+        reporte.cerrarYEnviar();
+        reporteDAO.actualizar(reporte);
+
+        // Notificar a jefatura
+        NotificacionDAO notifDAO = new NotificacionDAO();
+        // Aquí deberías obtener el id_usuario de jefatura
+        // Por ahora, asumimos que hay un método para obtenerlo
+        int idUsuarioJefatura = obtenerIdUsuarioJefatura();
+
+        Notificacion notif = new Notificacion();
+        notif.setIdUsuario(idUsuarioJefatura);
+        notif.setContenido("El director " + this.getNombresCompletos() +
+                " ha enviado un reporte para revisión.");
+        notifDAO.guardar(notif);
+    }
+
+    /**
+     * Obtiene el ID del usuario de jefatura
+     * Este método debería consultar la BD para encontrar un usuario con rol JEFATURA
+     */
+    private int obtenerIdUsuarioJefatura() throws SQLException {
+        UsuarioDAO usuarioDAO = new UsuarioDAO();
+        List<Usuario> usuarios = usuarioDAO.obtenerTodos();
+
+        for (Usuario u : usuarios) {
+            if ("JEFATURA".equalsIgnoreCase(u.getRol())) {
+                return u.getIdUsuario();
+            }
+        }
+
+        throw new SQLException("No se encontró usuario de Jefatura en el sistema");
     }
 
     public void agregarParticipacionAReporte(int idReporte, int idParticipacion) throws SQLException {
@@ -87,7 +192,7 @@ public class Director {
     }
 
     public void aprobarInformeDeActividades(InformeActividades informe) throws SQLException {
-        informe.setEstado(EstadoReporte.APROBADO);
+        informe.setEstado(EstadoInforme.APROBADO);
         // Aquí podrías llamar al DAO para persistir el cambio
         // InformeActividadesDAO dao = new InformeActividadesDAO();
         // dao.actualizar(informe);
@@ -110,6 +215,16 @@ public class Director {
 
     public void agregarNotificacion(Notificacion notificacion) {
         this.notificaciones.add(notificacion);
+    }
+
+
+    /**
+     * Verifica si es el primer login del director
+     * Retorna true si necesita cambiar contraseña
+     */
+    public boolean debeActualizarContrasena() throws SQLException {
+        UsuarioDAO usuarioDAO = new UsuarioDAO();
+        return usuarioDAO.tieneContrasenaDefecto(this.idUsuario, this.cedula);
     }
 
     // --- GETTERS Y SETTERS ---

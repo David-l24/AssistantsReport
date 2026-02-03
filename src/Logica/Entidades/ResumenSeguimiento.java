@@ -22,6 +22,8 @@ public class ResumenSeguimiento {
     // --- TOTALES GLOBALES ---
     private int totalPlanificado;
     private int totalRegistrado;
+    private int totalActivo;
+    private int totalRetirado;
     private boolean cumplePlanificacionGlobal;
 
     public ResumenSeguimiento() {
@@ -86,4 +88,12 @@ public class ResumenSeguimiento {
     public int getTotalPlanificado() { return totalPlanificado; }
     public int getTotalRegistrado() { return totalRegistrado; }
     public boolean isCumplePlanificacionGlobal() { return cumplePlanificacionGlobal; }
+
+    public int getTotalActivo() {
+        return cantidadAsistentesActivos + cantidadTecnicosActivos + cantidadAyudantesActivos;
+    }
+
+    public int getTotalRetirado() {
+        return cantidadAsistentesRetirados + cantidadTecnicosRetirados + cantidadAyudantesRetirados;
+    }
 }

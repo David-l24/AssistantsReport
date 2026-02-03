@@ -251,8 +251,8 @@ public class JefProyectos extends VBox {
             agregarFila(grid, 4, "TOTAL",
                     resumen.getTotalPlanificado(),
                     resumen.getTotalRegistrado(),
-                    resumen.getTotalPlanificado(), // activos globales no se suma directamente
-                    0);
+                    resumen.getTotalActivo(),
+                    resumen.getTotalRetirado());
 
             // Cumplimiento
             Label cumple = new Label(resumen.isCumplePlanificacionGlobal() ? "Cumple planificación" : "No cumple planificación");

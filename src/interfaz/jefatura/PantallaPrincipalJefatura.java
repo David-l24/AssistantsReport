@@ -62,7 +62,7 @@ public class PantallaPrincipalJefatura extends VBox {
         barra.agregarTab("Directores",       () -> mostrar(new JefDirectores()));
         barra.agregarTab("Personal",         () -> mostrar(new JefPersonal()));
         barra.agregarTab("Informes",         () -> mostrar(new JefInformes()));
-        barra.agregarTab("Reportes",         () -> mostrar(new JefReportes()));
+        barra.agregarTab("Reportes",         () -> mostrar(new JefReportes(jefatura)));
         barra.agregarTab("Administración",   () -> mostrar(new JefAdministracion()));
 
         getChildren().addAll(barra, contenedorPrincipal);

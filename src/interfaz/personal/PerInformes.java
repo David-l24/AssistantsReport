@@ -34,6 +34,7 @@ import java.util.List;
  *  – Solo se puede editar un informe EN_EDICION.
  *  – Un informe RECHAZADO puede ser devuelto a EN_EDICION desde aquí.
  *  – Se necesita al menos 1 semana para enviar.
+ *  – Personal con participación RETIRADA o FINALIZADA no puede crear nuevos informes.
  */
 public class PerInformes extends BorderPane {
 
@@ -200,6 +201,28 @@ public class PerInformes extends BorderPane {
 
     /** Abre el panel vacío para crear un nuevo informe */
     private void abrirPanelNuevo() {
+        // ── Validación: personal retirado o finalizado no puede crear informes ──
+        try {
+            ParticipacionDAO parDAO = new ParticipacionDAO();
+            List<Participacion> participaciones = parDAO.obtenerPorPersonal(personal.getCedula());
+
+            if (!participaciones.isEmpty()) {
+                EstadoParticipacion estadoActual = participaciones.get(0).getEstado();
+                if (estadoActual == EstadoParticipacion.RETIRADO || estadoActual == EstadoParticipacion.FINALIZADO) {
+                    EstiloUI.alertaError("No permitido",
+                                    "No puede crear nuevos informes porque su participación tiene estado " +
+                                            estadoActual.name().charAt(0) + estadoActual.name().substring(1).toLowerCase() +
+                                            ". Comuníquese con el Director para más información.")
+                            .showAndWait();
+                    return;
+                }
+            }
+        } catch (SQLException e) {
+            EstiloUI.alertaError("Error", "No se pudo verificar el estado de su participación: " + e.getMessage())
+                    .showAndWait();
+            return;
+        }
+
         informeEnEdicion = null;
         semanasEnMemoria.clear();
         // Agregar una semana vacía por defecto

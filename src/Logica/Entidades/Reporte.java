@@ -97,28 +97,22 @@ public class Reporte {
     }
 
     /**
-     * Cierra el reporte y lo envía a jefatura
-     * IMPORTANTE: Ahora persiste el cambio en la base de datos
+     * Cierra el reporte y lo envía a jefatura.
+     * El director puede enviar reportes sin participaciones (ej. personal retirado o sin personal).
+     * IMPORTANTE: Persiste el cambio en la base de datos.
      */
     public void cerrarYEnviar() throws SQLException {
         if (this.estado != EstadoReporte.EN_EDICION) {
             throw new IllegalStateException("Solo se pueden cerrar reportes en edición");
         }
 
-        if (participacionesIncluidas.isEmpty()) {
-            throw new IllegalStateException("El reporte debe incluir al menos una participación");
-        }
-
         // Cambiar estado en memoria
         this.estado = EstadoReporte.CERRADO;
         this.fechaCierre = LocalDate.now();
 
-        // CRÍTICO: Persistir el cambio en la base de datos
+        // Persistir el cambio en la base de datos
         ReporteDAO reporteDAO = new ReporteDAO();
         reporteDAO.actualizar(this);
-
-        // Notificar a jefatura (necesitarás obtener el id_usuario de jefatura de alguna forma)
-        // Esto se puede mejorar con una tabla de configuración o búsqueda de usuarios con rol JEFATURA
     }
 
     // Getters y Setters de la Lista

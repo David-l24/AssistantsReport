@@ -10,7 +10,9 @@ import Logica.Entidades.*;
 import interfaz.comun.EstiloUI;
 
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -109,7 +111,15 @@ public class JefPersonal extends VBox {
         try {
             PersonalDeInvestigacionDAO piDAO = new PersonalDeInvestigacionDAO();
             ParticipacionDAO parDAO          = new ParticipacionDAO();
+            ProyectoDAO pDAO                 = new ProyectoDAO();
             List<PersonalDeInvestigacion> todos = piDAO.obtenerTodos();
+
+            // Mapa id_proyecto → codigo_proyecto (una sola consulta para toda la tabla)
+            Map<Integer, String> codigosPorId = new HashMap<>();
+            for (Proyecto proy : pDAO.obtenerTodos()) {
+                codigosPorId.put(proy.getIdProyecto(),
+                        proy.getCodigoProyecto() != null ? proy.getCodigoProyecto() : "Proy #" + proy.getIdProyecto());
+            }
 
             String buscar   = txtBuscar.getText().trim().toLowerCase();
             String tipoSel  = cboTipo.getValue();
@@ -127,8 +137,8 @@ public class JefPersonal extends VBox {
             for (PersonalDeInvestigacion p : todos) {
                 // Filtro nombre
                 if (!buscar.isEmpty() &&
-                    !p.getNombres().toLowerCase().contains(buscar) &&
-                    !p.getApellidos().toLowerCase().contains(buscar)) continue;
+                        !p.getNombres().toLowerCase().contains(buscar) &&
+                        !p.getApellidos().toLowerCase().contains(buscar)) continue;
 
                 // Filtro tipo
                 if (!"Todos".equals(tipoSel) && !tipoSel.equalsIgnoreCase(p.getTipo())) continue;
@@ -150,7 +160,7 @@ public class JefPersonal extends VBox {
                 String estadoParticipacion = participaciones.isEmpty() ? "—" :
                         participaciones.get(0).getEstado().name();
 
-                contenido.getChildren().add(crearFila(p, estadoParticipacion));
+                contenido.getChildren().add(crearFila(p, estadoParticipacion, codigosPorId));
             }
 
             if (contenido.getChildren().isEmpty()) {
@@ -162,7 +172,7 @@ public class JefPersonal extends VBox {
         }
     }
 
-    private HBox crearFila(PersonalDeInvestigacion p, String estadoParticipacion) {
+    private HBox crearFila(PersonalDeInvestigacion p, String estadoParticipacion, Map<Integer, String> codigosPorId) {
         HBox fila = new HBox();
         fila.setAlignment(Pos.CENTER_LEFT);
         fila.setPadding(new Insets(9, 0, 9, 0));
@@ -172,7 +182,8 @@ public class JefPersonal extends VBox {
         Label apellidos = EstiloUI.labelBody(p.getApellidos()); apellidos.setMinWidth(150); apellidos.setPrefWidth(150);
         Label tipo = EstiloUI.labelBody(p.getTipo());           tipo.setMinWidth(100);      tipo.setPrefWidth(100);
         Label cedula = EstiloUI.labelBody(p.getCedula());       cedula.setMinWidth(120);    cedula.setPrefWidth(120);
-        Label proyecto = EstiloUI.labelBody("Proy #" + p.getIdProyecto()); proyecto.setMinWidth(180); proyecto.setPrefWidth(180);
+        Label proyecto = EstiloUI.labelBody(codigosPorId.getOrDefault(p.getIdProyecto(), "Proy #" + p.getIdProyecto()));
+        proyecto.setMinWidth(180); proyecto.setPrefWidth(180);
         Label estado = EstiloUI.badgeEstadoParticipacion(estadoParticipacion); estado.setMinWidth(120);
 
         fila.getChildren().addAll(nombres, apellidos, tipo, cedula, proyecto, estado);

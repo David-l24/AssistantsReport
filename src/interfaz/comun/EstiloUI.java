@@ -239,6 +239,7 @@ public class EstiloUI {
             case "EN_EDICION": return badge("En Edición", C_ORANGE_LIGHT, C_ORANGE);
             case "CERRADO":    return badge("Enviado",    C_VERY_LIGHT,   C_VERY_DARK);
             case "APROBADO":   return badge("Aprobado",   C_VERY_LIGHT,   C_VERY_DARK);
+            case "RECHAZADO":  return badge("Rechazado",  C_RED_LIGHT,    C_RED);
             default:           return badge(estado,       C_GRAY_LIGHT,   C_GRAY_DARK);
         }
     }

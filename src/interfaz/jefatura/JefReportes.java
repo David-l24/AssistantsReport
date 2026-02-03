@@ -43,7 +43,7 @@ public class JefReportes extends VBox {
         HBox filtros = new HBox(16);
         filtros.setAlignment(Pos.CENTER_LEFT);
         cboEstado = new ComboBox<>();
-        cboEstado.getItems().addAll("Todos", "EN_EDICION", "CERRADO", "APROBADO");
+        cboEstado.getItems().addAll("Todos", "EN_EDICION", "CERRADO", "APROBADO", "RECHAZADO");
         cboEstado.setValue("Todos");
         cboEstado.setOnAction(e -> cargar());
         filtros.getChildren().addAll(EstiloUI.labelSmall("Estado:"), cboEstado);
@@ -135,6 +135,10 @@ public class JefReportes extends VBox {
             Button btnAprobar = EstiloUI.botonSmall("Aprobar", EstiloUI.C_MEDIUM);
             btnAprobar.setOnAction(e -> aprobarReporte(r));
             acciones.getChildren().add(btnAprobar);
+
+            Button btnRechazar = EstiloUI.botonSmall("Rechazar", EstiloUI.C_RED);
+            btnRechazar.setOnAction(e -> rechazarReporte(r));
+            acciones.getChildren().add(btnRechazar);
         }
 
         fila.getChildren().addAll(id, proyecto, periodo, fechaIni, fechaCierre, estado, acciones);
@@ -149,6 +153,43 @@ public class JefReportes extends VBox {
                 try {
                     jefatura.aprobarReporte(r);
                     EstiloUI.alertaInfo("Éxito", "Reporte aprobado.").showAndWait();
+                    cargar();
+                } catch (SQLException e) {
+                    EstiloUI.alertaError("Error", e.getMessage()).showAndWait();
+                }
+            }
+        });
+    }
+
+    private void rechazarReporte(Reporte r) {
+        // Dialog con TextField para el motivo
+        TextField txtMotivo = new TextField();
+        txtMotivo.setPrefWidth(380);
+        txtMotivo.setPromptText("Escriba el motivo del rechazo...");
+
+        VBox contenidoDialog = new VBox(10);
+        contenidoDialog.setPadding(new Insets(10));
+        contenidoDialog.getChildren().addAll(
+                EstiloUI.labelSmall("Motivo del rechazo:"),
+                txtMotivo
+        );
+
+        Alert dialog = new Alert(Alert.AlertType.CONFIRMATION);
+        dialog.setTitle("Rechazar Reporte");
+        dialog.setHeaderText("¿Desea rechazar el reporte #" + r.getIdReporte() + "?");
+        dialog.getDialogPane().setContent(contenidoDialog);
+        dialog.getDialogPane().setMinWidth(440);
+
+        dialog.showAndWait().ifPresent(btn -> {
+            if (btn == ButtonType.OK) {
+                String motivo = txtMotivo.getText().trim();
+                if (motivo.isEmpty()) {
+                    EstiloUI.alertaError("Validación", "Debe indicar un motivo para el rechazo.").showAndWait();
+                    return;
+                }
+                try {
+                    jefatura.rechazarReporte(r, motivo);
+                    EstiloUI.alertaInfo("Éxito", "Reporte rechazado. El director será notificado.").showAndWait();
                     cargar();
                 } catch (SQLException e) {
                     EstiloUI.alertaError("Error", e.getMessage()).showAndWait();

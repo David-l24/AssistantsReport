@@ -10,23 +10,27 @@ import Logica.Entidades.*;
 import interfaz.comun.EstiloUI;
 
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.List;
 
 /**
  * Módulo de Administración para Jefatura.
- * Permite crear nuevos usuarios de tipo JEFATURA.
- * Muestra listado de usuarios de jefatura actuales.
+ *  – Sección superior: usuarios de Jefatura (sin cambios).
+ *  – Sección inferior (Req 3): creación y listado de Periodos Académicos.
  */
 public class JefAdministracion extends VBox {
 
     private VBox listaUsuarios;
+    private VBox listaPeriodos;   // Req 3
 
     public JefAdministracion() {
         super(20);
         setPadding(new Insets(24));
         setStyle("-fx-background-color: " + EstiloUI.C_OFF_WHITE + ";");
 
-        // ── Header ──────────────────────────────────────────
+        // ═══════════════════════════════════════════════
+        //  SECCIÓN 1 – USUARIOS DE JEFATURA
+        // ═══════════════════════════════════════════════
         HBox header = new HBox(16);
         header.setAlignment(Pos.CENTER_LEFT);
         header.getChildren().add(EstiloUI.labelTitulo("Administración de Usuarios"));
@@ -37,15 +41,12 @@ public class JefAdministracion extends VBox {
         header.getChildren().add(btnCrear);
         getChildren().add(header);
 
-        // ── Descripción ──────────────────────────────────────
         Label desc = EstiloUI.labelSmall("Desde esta sección puede crear nuevos usuarios con rol de Jefatura.");
         getChildren().add(desc);
 
-        // ── Listado usuarios jefatura ────────────────────────
         VBox tarjeta = EstiloUI.tarjeta();
         tarjeta.getChildren().add(EstiloUI.labelSubtitulo("Usuarios de Jefatura"));
 
-        // Header tabla
         HBox tableHeader = new HBox();
         tableHeader.setPadding(new Insets(10, 0, 10, 0));
         tableHeader.setStyle("-fx-border-color: " + EstiloUI.C_DARK + "; -fx-border-width: 0 0 2 0;");
@@ -64,8 +65,46 @@ public class JefAdministracion extends VBox {
         getChildren().add(tarjeta);
 
         cargarListado();
+
+        // ═══════════════════════════════════════════════
+        //  SECCIÓN 2 – PERIODOS ACADÉMICOS  (Req 3)
+        // ═══════════════════════════════════════════════
+        getChildren().add(EstiloUI.separador());
+
+        HBox headerPA = new HBox(16);
+        headerPA.setAlignment(Pos.CENTER_LEFT);
+        headerPA.getChildren().add(EstiloUI.labelTitulo("Periodos Académicos"));
+        HBox.setHgrow(headerPA.getChildren().get(0), Priority.ALWAYS);
+
+        Button btnCrearPA = EstiloUI.botonPrimario("+ Crear Periodo");
+        btnCrearPA.setOnAction(e -> mostrarFormularioCrearPeriodo());
+        headerPA.getChildren().add(btnCrearPA);
+        getChildren().add(headerPA);
+
+        VBox tarjetaPA = EstiloUI.tarjeta();
+        tarjetaPA.getChildren().add(EstiloUI.labelSubtitulo("Listado de Periodos"));
+
+        HBox tableHeaderPA = new HBox();
+        tableHeaderPA.setPadding(new Insets(10, 0, 10, 0));
+        tableHeaderPA.setStyle("-fx-border-color: " + EstiloUI.C_DARK + "; -fx-border-width: 0 0 2 0;");
+        String[] colsPA  = {"Código", "Fecha Inicio", "Fecha Fin", "Fecha Mitad"};
+        double[] widthsPA = {100,      150,            150,         150};
+        for (int i = 0; i < colsPA.length; i++) {
+            Label lbl = new Label(colsPA[i]);
+            lbl.setStyle("-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: " + EstiloUI.C_GRAY_DARK + ";");
+            lbl.setMinWidth(widthsPA[i]); lbl.setPrefWidth(widthsPA[i]);
+            tableHeaderPA.getChildren().add(lbl);
+        }
+        tarjetaPA.getChildren().add(tableHeaderPA);
+
+        listaPeriodos = new VBox(0);
+        tarjetaPA.getChildren().add(listaPeriodos);
+        getChildren().add(tarjetaPA);
+
+        cargarListadoPeriodos();
     }
 
+    // ─── CARGA USUARIOS ──────────────────────────────────────────────────
     private void cargarListado() {
         listaUsuarios.getChildren().clear();
         try {
@@ -74,7 +113,6 @@ public class JefAdministracion extends VBox {
             List<Jefatura> jefaturas = jDAO.obtenerTodos();
 
             for (Jefatura j : jefaturas) {
-                // Obtener username
                 Usuario u = uDAO.obtenerPorId(j.getIdUsuario());
                 String username = (u != null) ? u.getUsername() : "—";
 
@@ -96,13 +134,45 @@ public class JefAdministracion extends VBox {
             if (listaUsuarios.getChildren().isEmpty()) {
                 listaUsuarios.getChildren().add(EstiloUI.labelSmall("  No hay usuarios de jefatura registrados."));
             }
-
         } catch (SQLException e) {
             listaUsuarios.getChildren().add(EstiloUI.labelSmall("  Error: " + e.getMessage()));
         }
     }
 
-    // ─── FORMULARIO CREAR USUARIO JEFATURA ───────────────────────────────
+    // ─── CARGA PERIODOS (Req 3) ──────────────────────────────────────────
+    private void cargarListadoPeriodos() {
+        listaPeriodos.getChildren().clear();
+        try {
+            PeriodoAcademicoDAO paDAO = new PeriodoAcademicoDAO();
+            List<PeriodoAcademico> periodos = paDAO.obtenerTodos();
+
+            for (PeriodoAcademico pa : periodos) {
+                HBox fila = new HBox();
+                fila.setAlignment(Pos.CENTER_LEFT);
+                fila.setPadding(new Insets(9, 0, 9, 0));
+                fila.setStyle("-fx-border-color: " + EstiloUI.C_GRAY_LIGHT + "; -fx-border-width: 0 0 1 0;");
+
+                Label codigo = EstiloUI.labelBody(pa.getCodigo());                        codigo.setMinWidth(100); codigo.setPrefWidth(100);
+                Label inicio = EstiloUI.labelBody(pa.getFechaInicio().toString());        inicio.setMinWidth(150); inicio.setPrefWidth(150);
+                Label fin    = EstiloUI.labelBody(pa.getFechaFin().toString());           fin.setMinWidth(150);    fin.setPrefWidth(150);
+                Label mitad  = EstiloUI.labelBody(pa.getFechaMitad() != null ? pa.getFechaMitad().toString() : "—");
+                mitad.setMinWidth(150); mitad.setPrefWidth(150);
+
+                fila.getChildren().addAll(codigo, inicio, fin, mitad);
+                listaPeriodos.getChildren().add(fila);
+            }
+
+            if (listaPeriodos.getChildren().isEmpty()) {
+                listaPeriodos.getChildren().add(EstiloUI.labelSmall("  No hay periodos académicos registrados."));
+            }
+        } catch (SQLException e) {
+            listaPeriodos.getChildren().add(EstiloUI.labelSmall("  Error: " + e.getMessage()));
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  FORMULARIO – CREAR USUARIO JEFATURA  (sin cambios respecto al original)
+    // ═══════════════════════════════════════════════════════════════════════
     private void mostrarFormularioCrear() {
         VBox form = new VBox(14);
         form.setPadding(new Insets(10));
@@ -128,9 +198,7 @@ public class JefAdministracion extends VBox {
         dialog.getDialogPane().setContent(form);
         dialog.getDialogPane().setMinWidth(500);
         dialog.getDialogPane().getButtonTypes().clear();
-        dialog.getDialogPane().getButtonTypes().addAll(
-                new ButtonType("Crear"),
-                ButtonType.CANCEL);
+        dialog.getDialogPane().getButtonTypes().addAll(new ButtonType("Crear"), ButtonType.CANCEL);
 
         dialog.showAndWait().ifPresent(btn -> {
             if (btn.getText().equals("Crear")) {
@@ -140,8 +208,7 @@ public class JefAdministracion extends VBox {
     }
 
     private void crearUsuarioJefatura(TextField nombres, TextField apellidos,
-                                       TextField cedula, TextField correo, TextField username) {
-        // Validaciones
+                                      TextField cedula, TextField correo, TextField username) {
         if (nombres.getText().trim().isEmpty() || apellidos.getText().trim().isEmpty()) {
             EstiloUI.alertaError("Validación", "Nombres y apellidos son obligatorios.").showAndWait();
             return;
@@ -159,10 +226,7 @@ public class JefAdministracion extends VBox {
             UsuarioDAO uDAO  = new UsuarioDAO();
             JefaturaDAO jDAO = new JefaturaDAO();
 
-            // Contraseña por defecto
             String contrasenaDefecto = UsuarioDAO.generarContrasenaDefecto(cedula.getText().trim());
-
-            // Crear usuario
             Usuario usuario = new Usuario(username.getText().trim(), contrasenaDefecto, "JEFATURA");
             int idUsuario = uDAO.guardar(usuario);
 
@@ -171,7 +235,6 @@ public class JefAdministracion extends VBox {
                 return;
             }
 
-            // Crear entidad Jefatura
             Jefatura nueva = new Jefatura(
                     nombres.getText().trim(),
                     apellidos.getText().trim(),
@@ -183,22 +246,127 @@ public class JefAdministracion extends VBox {
 
             EstiloUI.alertaInfo("Éxito",
                     "Usuario de jefatura creado.\n" +
-                    "Username: " + username.getText().trim() + "\n" +
-                    "Contraseña temporal: " + contrasenaDefecto).showAndWait();
+                            "Username: " + username.getText().trim() + "\n" +
+                            "Contraseña temporal: " + contrasenaDefecto).showAndWait();
 
-            cargarListado(); // refrescar
+            cargarListado();
+        } catch (SQLException e) {
+            EstiloUI.alertaError("Error", e.getMessage()).showAndWait();
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  FORMULARIO – CREAR PERIODO ACADÉMICO  (Req 3)
+    // ═══════════════════════════════════════════════════════════════════════
+    private void mostrarFormularioCrearPeriodo() {
+        VBox form = new VBox(14);
+        form.setPadding(new Insets(10));
+        form.setMinWidth(460);
+
+        TextField txtCodigo = EstiloUI.crearTextField("Código (máx 5 caracteres)");
+        txtCodigo.setOnKeyReleased(e -> {
+            if (txtCodigo.getText().length() > 5) {
+                txtCodigo.setText(txtCodigo.getText().substring(0, 5));
+            }
+        });
+
+        DatePicker dpInicio = new DatePicker();
+        dpInicio.setPromptText("dd/mm/yyyy");
+        dpInicio.setPrefWidth(240);
+
+        DatePicker dpFin = new DatePicker();
+        dpFin.setPromptText("dd/mm/yyyy");
+        dpFin.setPrefWidth(240);
+
+        DatePicker dpMitad = new DatePicker();
+        dpMitad.setPromptText("Opcional – dd/mm/yyyy");
+        dpMitad.setPrefWidth(240);
+
+        form.getChildren().addAll(
+                wrapLabel("Código:",      txtCodigo),
+                wrapLabel("Fecha Inicio:", dpInicio),
+                wrapLabel("Fecha Fin:",    dpFin),
+                wrapLabel("Fecha Mitad:",  dpMitad)
+        );
+
+        Alert dialog = new Alert(Alert.AlertType.CONFIRMATION);
+        dialog.setTitle("Crear Periodo Académico");
+        dialog.setHeaderText("Nuevo periodo académico");
+        dialog.getDialogPane().setContent(form);
+        dialog.getDialogPane().setMinWidth(500);
+        dialog.getDialogPane().getButtonTypes().clear();
+        dialog.getDialogPane().getButtonTypes().addAll(new ButtonType("Crear"), ButtonType.CANCEL);
+
+        dialog.showAndWait().ifPresent(btn -> {
+            if (btn.getText().equals("Crear")) {
+                crearPeriodoAcademico(txtCodigo, dpInicio, dpFin, dpMitad);
+            }
+        });
+    }
+
+    private void crearPeriodoAcademico(TextField txtCodigo,
+                                       DatePicker dpInicio, DatePicker dpFin, DatePicker dpMitad) {
+        // ── Validaciones ──
+        String codigo = txtCodigo.getText().trim();
+        if (codigo.isEmpty()) {
+            EstiloUI.alertaError("Validación", "El código es obligatorio.").showAndWait();
+            return;
+        }
+        if (codigo.length() > 5) {
+            EstiloUI.alertaError("Validación", "El código no puede tener más de 5 caracteres.").showAndWait();
+            return;
+        }
+
+        LocalDate inicio = dpInicio.getValue();
+        LocalDate fin    = dpFin.getValue();
+        LocalDate mitad  = dpMitad.getValue();   // puede ser null
+
+        if (inicio == null || fin == null) {
+            EstiloUI.alertaError("Validación", "Fecha de inicio y fecha de fin son obligatorias.").showAndWait();
+            return;
+        }
+        if (!fin.isAfter(inicio)) {
+            EstiloUI.alertaError("Validación", "La fecha de fin debe ser posterior a la fecha de inicio.").showAndWait();
+            return;
+        }
+        if (mitad != null && (!mitad.isAfter(inicio) || !mitad.isBefore(fin))) {
+            EstiloUI.alertaError("Validación", "La fecha de mitad debe estar entre inicio y fin.").showAndWait();
+            return;
+        }
+
+        try {
+            // ── Verificar código duplicado ──
+            PeriodoAcademicoDAO paDAO = new PeriodoAcademicoDAO();
+            PeriodoAcademico existente = paDAO.obtenerPorCodigo(codigo);
+            if (existente != null) {
+                EstiloUI.alertaError("Validación", "Ya existe un periodo académico con el código: " + codigo).showAndWait();
+                return;
+            }
+
+            // ── Crear y persistir ──
+            PeriodoAcademico nuevo = new PeriodoAcademico();
+            nuevo.setCodigo(codigo);
+            nuevo.setFechaInicio(inicio);
+            nuevo.setFechaFin(fin);
+            nuevo.setFechaMitad(mitad);   // null si no se indicó
+
+            paDAO.guardar(nuevo);
+            EstiloUI.alertaInfo("Éxito", "Periodo académico \"" + codigo + "\" creado exitosamente.").showAndWait();
+
+            cargarListadoPeriodos();   // refrescar listado
 
         } catch (SQLException e) {
             EstiloUI.alertaError("Error", e.getMessage()).showAndWait();
         }
     }
 
+    // ─── Utilidad ────────────────────────────────────────────────────────
     private HBox wrapLabel(String label, Control control) {
         HBox wrap = new HBox(8);
         wrap.setAlignment(Pos.CENTER_LEFT);
         Label lbl = EstiloUI.labelSmall(label);
-        lbl.setMinWidth(90);
-        control.setPrefWidth(300);
+        lbl.setMinWidth(120);
+        control.setPrefWidth(240);
         wrap.getChildren().addAll(lbl, control);
         return wrap;
     }

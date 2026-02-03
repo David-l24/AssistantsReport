@@ -19,6 +19,7 @@ import java.util.List;
  * – Formulario para crear un nuevo proyecto (estado EN_REVISION por defecto)
  * – Botón "Resumen" que abre popup de seguimiento
  * – Botones de aprobar/rechazar inline
+ * – El código del proyecto se asigna al momento de la aprobación
  */
 public class JefProyectos extends VBox {
 
@@ -102,8 +103,11 @@ public class JefProyectos extends VBox {
         Label nombre = EstiloUI.labelBody(p.getNombre());
         nombre.setMinWidth(260); nombre.setPrefWidth(260);
 
-        // Código
-        Label codigo = EstiloUI.labelBody(p.getCodigoProyecto() != null ? p.getCodigoProyecto() : "—");
+        // Código (vacío si está en revisión)
+        String codigoText = (p.getCodigoProyecto() != null && !p.getCodigoProyecto().isEmpty())
+                ? p.getCodigoProyecto()
+                : "—";
+        Label codigo = EstiloUI.labelBody(codigoText);
         codigo.setMinWidth(100); codigo.setPrefWidth(100);
 
         // Director
@@ -141,13 +145,47 @@ public class JefProyectos extends VBox {
 
     // ─── APROBAR / RECHAZAR ──────────────────────────────────────────────
     private void aprobar(Proyecto proyecto) {
-        Alert c = EstiloUI.alertaConfirmacion("Aprobar",
-                "¿Aprobar \"" + proyecto.getNombre() + "\"? Se creará usuario del director.");
-        c.showAndWait().ifPresent(btn -> {
+        // Crear diálogo para solicitar el código del proyecto
+        VBox form = new VBox(14);
+        form.setPadding(new Insets(10));
+        form.setMinWidth(400);
+
+        Label instruccion = EstiloUI.labelBody("Ingrese el código para el proyecto \"" + proyecto.getNombre() + "\":");
+        TextField txtCodigo = EstiloUI.crearTextField("Código del proyecto (ej. PRY001)");
+
+        form.getChildren().addAll(instruccion, txtCodigo);
+
+        Alert dialog = new Alert(Alert.AlertType.CONFIRMATION);
+        dialog.setTitle("Aprobar Proyecto");
+        dialog.setHeaderText("Asignar Código y Aprobar");
+        dialog.getDialogPane().setContent(form);
+        dialog.getDialogPane().setMinWidth(450);
+
+        dialog.showAndWait().ifPresent(btn -> {
             if (btn == ButtonType.OK) {
+                String codigo = txtCodigo.getText().trim();
+
+                // Validar que se haya ingresado un código
+                if (codigo.isEmpty()) {
+                    EstiloUI.alertaError("Validación", "Debe ingresar un código para el proyecto.").showAndWait();
+                    return;
+                }
+
                 try {
+                    // Verificar que el código no esté duplicado
+                    ProyectoDAO pDAO = new ProyectoDAO();
+                    Proyecto existente = pDAO.obtenerPorCodigo(codigo);
+                    if (existente != null && existente.getIdProyecto() != proyecto.getIdProyecto()) {
+                        EstiloUI.alertaError("Error", "Ya existe un proyecto con el código: " + codigo).showAndWait();
+                        return;
+                    }
+
+                    // Asignar el código al proyecto
+                    proyecto.setCodigoProyecto(codigo);
+
+                    // Aprobar el proyecto (esto creará el usuario del director)
                     jefatura.actualizarEstadoProyecto(proyecto, EstadoProyecto.APROBADO);
-                    EstiloUI.alertaInfo("Éxito", "Proyecto aprobado.").showAndWait();
+                    EstiloUI.alertaInfo("Éxito", "Proyecto aprobado con código: " + codigo).showAndWait();
                     construir(); // refrescar
                 } catch (SQLException e) {
                     EstiloUI.alertaError("Error", e.getMessage()).showAndWait();
@@ -272,9 +310,8 @@ public class JefProyectos extends VBox {
         form.setPadding(new Insets(10));
         form.setMinWidth(500);
 
-        // Campos
+        // Campos (sin el código, ya que se asignará al aprobar)
         TextField txtNombre   = EstiloUI.crearTextField("Nombre del proyecto");
-        TextField txtCodigo   = EstiloUI.crearTextField("Código (ej. PRY001)");
         TextField txtDurMeses = EstiloUI.crearTextField("Duración en meses");
 
         // Tipo proyecto
@@ -308,10 +345,9 @@ public class JefProyectos extends VBox {
         HBox row1 = new HBox(12); row1.getChildren().addAll(
                 wrapLabel("Nombre:", txtNombre));
         HBox row2 = new HBox(12); row2.getChildren().addAll(
-                wrapLabel("Código:", txtCodigo),
-                wrapLabel("Duración:", txtDurMeses));
+                wrapLabel("Duración:", txtDurMeses),
+                wrapLabel("Tipo:", cboTipo));
         HBox row3 = new HBox(12); row3.getChildren().addAll(
-                wrapLabel("Tipo:", cboTipo),
                 wrapLabel("Periodo:", cboPeriodo));
         HBox row4 = new HBox(12); row4.getChildren().addAll(
                 wrapLabel("Asistentes:", txtAsist),
@@ -339,17 +375,17 @@ public class JefProyectos extends VBox {
 
         dialog.showAndWait().ifPresent(btn -> {
             if (btn.getText().equals("Guardar")) {
-                guardarProyecto(txtNombre, txtCodigo, txtDurMeses, cboTipo, cboPeriodo,
+                guardarProyecto(txtNombre, txtDurMeses, cboTipo, cboPeriodo,
                         txtAsist, txtAyud, txtTecn,
                         txtDirNombres, txtDirApellidos, txtDirCedula, txtDirCorreo);
             }
         });
     }
 
-    private void guardarProyecto(TextField nombre, TextField codigo, TextField dur,
-                                  ComboBox<String> tipo, ComboBox<String> periodo,
-                                  TextField asist, TextField ayud, TextField tecn,
-                                  TextField dirNom, TextField dirApe, TextField dirCed, TextField dirCorr) {
+    private void guardarProyecto(TextField nombre, TextField dur,
+                                 ComboBox<String> tipo, ComboBox<String> periodo,
+                                 TextField asist, TextField ayud, TextField tecn,
+                                 TextField dirNom, TextField dirApe, TextField dirCed, TextField dirCorr) {
         // Validaciones básicas
         if (nombre.getText().trim().isEmpty()) {
             EstiloUI.alertaError("Validación", "El nombre es obligatorio.").showAndWait();
@@ -374,7 +410,8 @@ public class JefProyectos extends VBox {
             }
 
             proyecto.setNombre(nombre.getText().trim());
-            proyecto.setCodigoProyecto(codigo.getText().trim());
+            // NO se asigna código aquí - será asignado al aprobar
+            proyecto.setCodigoProyecto(null);
             proyecto.setDuracionMeses(Integer.parseInt(dur.getText().trim().isEmpty() ? "0" : dur.getText().trim()));
             proyecto.setEstado(EstadoProyecto.EN_REVISION);
 
@@ -397,7 +434,7 @@ public class JefProyectos extends VBox {
 
             // Guardar
             jefatura.registrarProyecto(proyecto);
-            EstiloUI.alertaInfo("Éxito", "Proyecto creado en estado \"En Revisión\".").showAndWait();
+            EstiloUI.alertaInfo("Éxito", "Proyecto creado en estado \"En Revisión\". El código se asignará al aprobar.").showAndWait();
             construir(); // refrescar
 
         } catch (Exception e) {

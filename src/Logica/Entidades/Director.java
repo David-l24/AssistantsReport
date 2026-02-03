@@ -71,6 +71,7 @@ public class Director {
         // Paso 5: Notificar al personal
         NotificacionDAO notifDAO = new NotificacionDAO();
         Notificacion notif = new Notificacion();
+        notif.setFecha(LocalDateTime.now());
         notif.setIdUsuario(idUsuarioGenerado);
         notif.setContenido("Ha sido registrado en el proyecto. Usuario: " + username +
                 ". Por favor, ingrese y cambie su contraseña.");

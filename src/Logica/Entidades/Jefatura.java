@@ -106,6 +106,8 @@ public class Jefatura {
             // Paso 5: Enviar notificación al director
             NotificacionDAO notifDAO = new NotificacionDAO();
             Notificacion notif = new Notificacion();
+            notif.setFecha(LocalDateTime.now());
+            notif.setIdUsuario(idUsuarioGenerado);
             notif.setIdUsuario(idUsuarioGenerado);
             notif.setContenido("Su proyecto '" + proyecto.getNombre() +
                     "' ha sido aprobado. Usuario: " + username +

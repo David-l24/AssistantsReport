@@ -168,6 +168,31 @@ public class Jefatura {
         }
     }
 
+    /**
+     * Rechaza un reporte CERRADO y notifica al director con el motivo.
+     */
+    public void rechazarReporte(Reporte reporte, String motivo) throws SQLException {
+        ReporteDAO reporteDAO = new ReporteDAO();
+        if (reporte.getEstado() == EstadoReporte.CERRADO) {
+            reporte.setEstado(EstadoReporte.RECHAZADO);
+            reporteDAO.actualizar(reporte);
+
+            ProyectoDAO proyectoDAO = new ProyectoDAO();
+            Proyecto proyecto = proyectoDAO.obtenerPorId(reporte.getIdProyecto());
+            if (proyecto != null && proyecto.getDirector() != null) {
+                NotificacionDAO notifDAO = new NotificacionDAO();
+                Notificacion notif = new Notificacion();
+                notif.setIdUsuario(proyecto.getDirector().getIdUsuario());
+                notif.setFecha(LocalDateTime.now());
+                notif.setContenido("Su reporte del proyecto '" + proyecto.getNombre() +
+                        "' ha sido rechazado por jefatura. Motivo: " + motivo);
+                notifDAO.guardar(notif);
+            }
+        } else {
+            throw new SQLException("Solo se pueden rechazar reportes cerrados.");
+        }
+    }
+
     public InformeActividades revisarInformeDeActividades(int idInforme) throws SQLException {
         InformeActividadesDAO informeDAO = new InformeActividadesDAO();
         return informeDAO.obtenerPorId(idInforme);

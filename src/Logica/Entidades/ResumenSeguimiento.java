@@ -29,7 +29,6 @@ public class ResumenSeguimiento {
     public ResumenSeguimiento() {
     }
 
-
     public void calcularTotales() {
         // 1. Calcular Total Planificado (Suma de lo requerido en el Proyecto)
         this.totalPlanificado = cantidadAsistentesPlanificados +
@@ -42,6 +41,14 @@ public class ResumenSeguimiento {
                 cantidadAyudantesRegistrados +
                 cantidadTecnicosRegistrados;
 
+        this.totalRetirado = cantidadAyudantesRetirados +
+                cantidadTecnicosRetirados +
+                cantidadAsistentesRetirados;
+
+        this.totalActivo = cantidadAsistentesActivos +
+                cantidadTecnicosActivos +
+                cantidadAyudantesActivos;
+
         // 3. Verificar cumplimiento
         this.cumplePlanificacionGlobal = verificarCumplimiento();
     }
@@ -49,7 +56,7 @@ public class ResumenSeguimiento {
     public boolean verificarCumplimiento() {
         // La regla de negocio básica: ¿Tenemos al menos tantos registrados como se planificó?
         // (Puedes ajustar la lógica si solo cuentan los 'Activos')
-        return totalRegistrado >= totalPlanificado;
+        return (totalRegistrado - totalRetirado) >= totalPlanificado;
     }
 
     // --- GETTERS Y SETTERS ---
@@ -90,10 +97,10 @@ public class ResumenSeguimiento {
     public boolean isCumplePlanificacionGlobal() { return cumplePlanificacionGlobal; }
 
     public int getTotalActivo() {
-        return cantidadAsistentesActivos + cantidadTecnicosActivos + cantidadAyudantesActivos;
+        return totalActivo;
     }
 
     public int getTotalRetirado() {
-        return cantidadAsistentesRetirados + cantidadTecnicosRetirados + cantidadAyudantesRetirados;
+        return totalRetirado;
     }
 }

@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
  *  – "Enviar" cierra el reporte y lo envía a Jefatura
  *
  * Restricción de dominio: máximo 2 reportes por periodo académico por proyecto.
+ * No se puede crear un nuevo reporte mientras existe uno EN_EDICION.
  */
 public class DirReportes extends VBox {
 
@@ -263,6 +264,20 @@ public class DirReportes extends VBox {
     // ─── CREAR NUEVO REPORTE ────────────────────────────────────────────────
     private void crearNuevoReporte() {
         try {
+            // ── Validación: no puede haber un reporte EN_EDICION activo ──
+            ReporteDAO rDAO = new ReporteDAO();
+            List<Reporte> reportesActuales = rDAO.obtenerPorProyecto(proyecto.getIdProyecto());
+            boolean tieneDraft = reportesActuales.stream()
+                    .anyMatch(r -> r.getEstado() == EstadoReporte.EN_EDICION);
+
+            if (tieneDraft) {
+                EstiloUI.alertaError("No se puede crear reporte",
+                                "Ya existe un reporte en edición. Debe enviarlo o eliminarlo antes de crear uno nuevo.")
+                        .showAndWait();
+                return;
+            }
+
+            // ── Selector de periodo académico ──
             PeriodoAcademicoDAO paDAO = new PeriodoAcademicoDAO();
             List<PeriodoAcademico> periodos = paDAO.obtenerTodos();
 
@@ -302,7 +317,7 @@ public class DirReportes extends VBox {
                         int idReporte = director.iniciarReporte(periodo, proyecto.getIdProyecto());
                         EstiloUI.alertaInfo("Éxito",
                                 "Reporte creado exitosamente (ID: " + idReporte + ").\n" +
-                                "Puede agregar participaciones y enviarlo desde la lista.").showAndWait();
+                                        "Puede agregar participaciones y enviarlo desde la lista.").showAndWait();
                         cargarReportes(); // refrescar
                     } catch (SQLException e) {
                         EstiloUI.alertaError("Error", e.getMessage()).showAndWait();
@@ -317,35 +332,20 @@ public class DirReportes extends VBox {
 
     // ─── ENVIAR REPORTE ─────────────────────────────────────────────────────
     private void enviarReporte(Reporte r) {
-        try {
-            ReporteDAO rDAO = new ReporteDAO();
-            rDAO.cargarParticipacionesDelReporte(r);
-
-            if (r.getParticipacionesIncluidas().isEmpty()) {
-                EstiloUI.alertaError("Validación",
-                        "El reporte debe incluir al menos una participación antes de enviarlo.")
-                        .showAndWait();
-                return;
-            }
-
-            Alert confirm = EstiloUI.alertaConfirmacion("Confirmar envío",
-                    "¿Desea cerrar y enviar este reporte a Jefatura?\n" +
-                    "Esta acción no puede deshacerse.");
-            confirm.showAndWait().ifPresent(res -> {
-                if (res == javafx.scene.control.ButtonType.OK) {
-                    try {
-                        director.enviarReporte(r);
-                        EstiloUI.alertaInfo("Éxito", "Reporte enviado exitosamente a Jefatura.").showAndWait();
-                        cargarReportes();
-                    } catch (SQLException e) {
-                        EstiloUI.alertaError("Error", e.getMessage()).showAndWait();
-                    }
+        Alert confirm = EstiloUI.alertaConfirmacion("Confirmar envío",
+                "¿Desea cerrar y enviar este reporte a Jefatura?\n" +
+                        "Esta acción no puede deshacerse.");
+        confirm.showAndWait().ifPresent(res -> {
+            if (res == javafx.scene.control.ButtonType.OK) {
+                try {
+                    director.enviarReporte(r);
+                    EstiloUI.alertaInfo("Éxito", "Reporte enviado exitosamente a Jefatura.").showAndWait();
+                    cargarReportes();
+                } catch (SQLException e) {
+                    EstiloUI.alertaError("Error", e.getMessage()).showAndWait();
                 }
-            });
-
-        } catch (SQLException e) {
-            EstiloUI.alertaError("Error", e.getMessage()).showAndWait();
-        }
+            }
+        });
     }
 
     // ─── UTILIDADES ─────────────────────────────────────────────────────────

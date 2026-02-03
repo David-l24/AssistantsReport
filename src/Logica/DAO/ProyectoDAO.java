@@ -49,6 +49,11 @@ public class ProyectoDAO {
     }
 
     public Proyecto obtenerPorCodigo(String codigo) throws SQLException {
+        // Si el código es null o vacío, retornar null
+        if (codigo == null || codigo.trim().isEmpty()) {
+            return null;
+        }
+
         String sql = "SELECT * FROM Proyecto WHERE codigo_proyecto = ?";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
@@ -136,10 +141,11 @@ public class ProyectoDAO {
     }
 
     /**
-     * Guarda un proyecto en estado EN_REVISION.
+     * Guarda un proyecto en estado EN_REVISION SIN código.
      * Como el director aún NO existe en la tabla director, cedula_director se deja NULL
      * y los datos del director se almacenan en los campos candidato_* de la BD.
-     * Cuando el proyecto se aprueba, se usa actualizarDirector() para setear cedula_director.
+     * Cuando el proyecto se aprueba, se usa actualizarCodigoYDirector() para setear
+     * tanto el código como la cedula_director.
      */
     public boolean guardarEnRevision(Proyecto proyecto, String candidato_nombres,
                                      String candidato_apellidos, String candidato_cedula,
@@ -148,22 +154,21 @@ public class ProyectoDAO {
                 "cedula_director, tipo_proyecto, num_asistentes_planificados, " +
                 "num_ayudantes_planificados, num_tecnico_planificados, " +
                 "candidato_nombres, candidato_apellidos, candidato_cedula, candidato_correo) " +
-                "VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_proyecto";
+                "VALUES (NULL, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_proyecto";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setString(1, proyecto.getCodigoProyecto());
-            stmt.setString(2, proyecto.getNombre());
-            stmt.setString(3, proyecto.getPeriodoInicio().getCodigo());
-            stmt.setInt(4, proyecto.getDuracionMeses());
-            stmt.setString(5, proyecto.getEstado().name());
-            stmt.setString(6, proyecto.getTipoProyecto());
-            stmt.setInt(7, proyecto.getNumAsistentesPlanificados());
-            stmt.setInt(8, proyecto.getNumAyudantesPlanificados());
-            stmt.setInt(9, proyecto.getNumTecnicosPlanificados());
-            stmt.setString(10, candidato_nombres);
-            stmt.setString(11, candidato_apellidos);
-            stmt.setString(12, candidato_cedula);
-            stmt.setString(13, candidato_correo);
+            stmt.setString(1, proyecto.getNombre());
+            stmt.setString(2, proyecto.getPeriodoInicio().getCodigo());
+            stmt.setInt(3, proyecto.getDuracionMeses());
+            stmt.setString(4, proyecto.getEstado().name());
+            stmt.setString(5, proyecto.getTipoProyecto());
+            stmt.setInt(6, proyecto.getNumAsistentesPlanificados());
+            stmt.setInt(7, proyecto.getNumAyudantesPlanificados());
+            stmt.setInt(8, proyecto.getNumTecnicosPlanificados());
+            stmt.setString(9, candidato_nombres);
+            stmt.setString(10, candidato_apellidos);
+            stmt.setString(11, candidato_cedula);
+            stmt.setString(12, candidato_correo);
 
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
@@ -175,8 +180,23 @@ public class ProyectoDAO {
     }
 
     /**
+     * Actualiza el código del proyecto y asigna el director real.
+     * Se usa en el flujo de aprobación cuando se pasa de EN_REVISION a APROBADO.
+     */
+    public boolean actualizarCodigoYDirector(int idProyecto, String codigoProyecto, String cedulaDirector) throws SQLException {
+        String sql = "UPDATE Proyecto SET codigo_proyecto = ?, cedula_director = ? WHERE id_proyecto = ?";
+
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setString(1, codigoProyecto);
+            stmt.setString(2, cedulaDirector);
+            stmt.setInt(3, idProyecto);
+            return stmt.executeUpdate() > 0;
+        }
+    }
+
+    /**
      * Asigna el cedula_director real al proyecto DESPUÉS de que el director ya existe
-     * en la tabla director. Se usa en el flujo de aprobación.
+     * en la tabla director. Se mantiene por compatibilidad.
      */
     public boolean actualizarDirector(int idProyecto, String cedulaDirector) throws SQLException {
         String sql = "UPDATE Proyecto SET cedula_director = ? WHERE id_proyecto = ?";
@@ -191,7 +211,7 @@ public class ProyectoDAO {
     public boolean actualizar(Proyecto proyecto) throws SQLException {
         String sql = "UPDATE Proyecto SET nombre = ?, periodo_inicio = ?, duracion_meses = ?, " +
                 "estado = ?, num_asistentes_planificados = ?, num_ayudantes_planificados = ?, " +
-                "num_tecnico_planificados = ?, cedula_director = ? WHERE codigo_proyecto = ?";
+                "num_tecnico_planificados = ?, cedula_director = ?, codigo_proyecto = ? WHERE id_proyecto = ?";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, proyecto.getNombre());
@@ -201,8 +221,9 @@ public class ProyectoDAO {
             stmt.setInt(5, proyecto.getNumAsistentesPlanificados());
             stmt.setInt(6, proyecto.getNumAyudantesPlanificados());
             stmt.setInt(7, proyecto.getNumTecnicosPlanificados());
-            stmt.setString(8, proyecto.getDirector().getCedula());
+            stmt.setString(8, proyecto.getDirector() != null ? proyecto.getDirector().getCedula() : null);
             stmt.setString(9, proyecto.getCodigoProyecto());
+            stmt.setInt(10, proyecto.getIdProyecto());
 
             return stmt.executeUpdate() > 0;
         }
@@ -260,6 +281,7 @@ public class ProyectoDAO {
 
         return proyecto;
     }
+
     /**
      * Obtiene un proyecto por su ID
      */
@@ -279,7 +301,7 @@ public class ProyectoDAO {
     public boolean actualizarEstado(Proyecto proyecto) throws SQLException {
         String sql = "UPDATE Proyecto SET nombre = ?, periodo_inicio = ?, duracion_meses = ?, " +
                 "estado = ?, num_asistentes_planificados = ?, num_ayudantes_planificados = ?, " +
-                "num_tecnico_planificados = ? WHERE codigo_proyecto = ?";
+                "num_tecnico_planificados = ?, codigo_proyecto = ? WHERE id_proyecto = ?";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, proyecto.getNombre());
@@ -290,6 +312,7 @@ public class ProyectoDAO {
             stmt.setInt(6, proyecto.getNumAyudantesPlanificados());
             stmt.setInt(7, proyecto.getNumTecnicosPlanificados());
             stmt.setString(8, proyecto.getCodigoProyecto());
+            stmt.setInt(9, proyecto.getIdProyecto());
 
             return stmt.executeUpdate() > 0;
         }

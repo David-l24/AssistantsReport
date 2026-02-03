@@ -5,8 +5,9 @@ package Logica.Enumeraciones;
  * Alineado con el tipo rol_sistema de PostgreSQL
  */
 public enum RolSistema {
-    ADMIN("ADMIN"),
-    DIRECTOR("DIRECTOR");
+    JEFATURA("JEFATURA"),
+    DIRECTOR("DIRECTOR"),
+    PERSONAL("PERSONAL");
 
     private final String nombre;
 
@@ -24,6 +25,6 @@ public enum RolSistema {
                 return rol;
             }
         }
-        return DIRECTOR; // Por defecto
+        return PERSONAL; // Por defecto
     }
 }

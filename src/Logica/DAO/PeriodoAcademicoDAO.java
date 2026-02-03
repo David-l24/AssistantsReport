@@ -44,7 +44,10 @@ public class PeriodoAcademicoDAO {
         periodo.setCodigo(rs.getString("codigo"));
         periodo.setFechaInicio(rs.getDate("fecha_inicio").toLocalDate());
         periodo.setFechaFin(rs.getDate("fecha_fin").toLocalDate());
-        periodo.setFechaMitad(rs.getDate("fecha_mitad").toLocalDate());
+        Date fechaMitad = rs.getDate("fecha_mitad");
+        if (fechaMitad != null) {
+            periodo.setFechaMitad(fechaMitad.toLocalDate());
+        }
         return periodo;
     }
 }

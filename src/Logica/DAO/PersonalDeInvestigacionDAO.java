@@ -64,7 +64,7 @@ public class PersonalDeInvestigacionDAO {
             stmt.setString(3, p.getNombres());
             stmt.setString(4, p.getApellidos());
             stmt.setString(5, p.getCorreo());
-            stmt.setString(6, p.getClass().getSimpleName()); // Guarda "Ayudante", "Tecnico", etc.
+            stmt.setString(6, p.getTipo()); // Usa el método abstracto: "Ayudante", "Asistente", "Tecnico"
             stmt.setInt(7, p.getIdProyecto());
 
             return stmt.executeUpdate() > 0;

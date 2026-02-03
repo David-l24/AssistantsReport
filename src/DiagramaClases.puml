@@ -9,12 +9,15 @@ package "Logica.Entidades" {
         - apellidos
         - correo
         - cedula
-
-        + registrarProyecto()
-        + actualizarEstadoProyecto()
-        + revisarReportes()
-        + aprobarReportes()
-        + revisarInformesDeActividades()
+        - notificaciones: List<Notificacion>
+        + agregarNotificacion(Notificacion): void
+        + revisarReportes(): List<Reporte>
+        + registrarProyecto(Proyecto): void
+        + generarResumenSeguimiento(int): ResumenSeguimiento
+        + revisarInformeDeActividades(int): InformeActividades
+        + aprobarReporte(Reporte): void
+        + actualizarEstadoProyecto(Proyecto, EstadoProyecto): void
+        + cargarNotificaciones(): void
     }
 
     class Director {
@@ -22,47 +25,51 @@ package "Logica.Entidades" {
         - apellidos: String
         - cedula: String
         - correo: String
-
-        + visualizarSeguimiento()
-        + registrarParticipacion()
-        + gestionarSeguimiento()
-        + actualizarContraseña()
-        + registrarPersonalDeInvestigacion()
-        + iniciarReporte()
-        + editarReporte()
-        + cerrarReporte()
-        + enviarReporte()
-        + aprobarInformeDeActividades()
-        + revisarInformesDeActividades()
+        - notificaciones: List<Notificacion>
+        + agregarParticipacionAReporte(int, int): void
+        + iniciarReporte(String, int): int
+        + aprobarInformeDeActividades(InformeActividades): void
+        + agregarNotificacion(Notificacion): void
+        + revisarInformeDeActividades(int): InformeActividades
+        + registrarParticipacion(String, LocalDate): void
+        + editarReporte(Reporte): void
+        + cerrarReporte(Reporte): void
+        + enviarReporte(Reporte): void
+        + rechazarInformeDeActividades(InformeActividades, String): void
+        + registrarPersonalDeInvestigacion(PersonalDeInvestigacion, int, LocalDate): void
+        + cargarNotificaciones(): void
     }
 
     abstract class PersonalDeInvestigacion {
+        - informesActividades: List<InformeActividades>
+        # notificaciones: List<Notificacion>
         - cedula: String
         - nombres: String
-        - apellidos: String
         - correo: String
-        - informeActividades[] : InformeActividades
-
-        + iniciarInformeActividades()
-        + editarInformeActividades()
-        + cerrarInformeActividades()
+        - apellidos: String
+        - idProyecto: int
+        - obtenerProyectoActual(): Proyecto
+        + iniciarInformeActividades(): InformeActividades
+        + cerrarInformeActividades(InformeActividades): void
+        + cargarNotificaciones(): void
+        + agregarInforme(InformeActividades): void
+        + editarInformeActividades(InformeActividades): void
     }
 
     abstract class Proyecto {
-        - codigo: String
-        - nombre: String
-        - periodoInicio: PeriodoAcademico
-        - duracionSemestres: int
         - estado: EstadoProyecto
         - director: Director
         - numAsistentesPlanificados: int
         - numAyudantesPlanificados: int
+        - codigoProyecto: String
+        - duracionMeses: int
         - numTecnicosPlanificados: int
-        --
-        + getTotalPersonalPlanificado(): int
-        + cambiarEstado(EstadoProyecto): void
-        + esEnEjecucion(): boolean
-        + tieneIntegrantesPlanificados(): boolean
+        - personalDeInvestigacion: List<PersonalDeInvestigacion>
+        - periodoInicio: PeriodoAcademico
+        - idProyecto: int
+        - nombre: String
+        + agregarPersonal(PersonalDeInvestigacion): void
+        + actualizarEstado(): void
     }
 
     class ProyectoSemilla {
@@ -74,19 +81,15 @@ package "Logica.Entidades" {
     }
 
     class Reporte {
-        - numeroReporte: int
-        - periodoAcademicoId: String
-        - proyecto: Proyecto
+        - idProyecto: int
+        - periodoAcademico: String
+        - participacionesIncluidas: List<Participacion>
+        - fechaInicio: LocalDate
         - estado: EstadoReporte
-        - fechaCreacion: LocalDateTime
-        - fechaCierre: LocalDateTime
-
-        + agregarParticipacion()
-        + cerrar()
-        + estaCompleto()
-        + estaCerrado()
-        + estaEnEdicion()
-        + puedeEditarse()
+        - fechaCierre: LocalDate
+        + agregarParticipacion(Participacion): void
+        + estaAtrasado(PeriodoAcademico): boolean
+        + cerrarYEnviar(): void
     }
 
     class PeriodoAcademico {
@@ -94,60 +97,77 @@ package "Logica.Entidades" {
         - fechaInicio: LocalDate
         - fechaFin: LocalDate
         - fechaMitad: LocalDate
-        --
-        + diasRestantes(): int
+
     }
 
     class Participacion {
-        - id: int
-        - personalDeInvestigacion: PersonalDeInvestigacion
-        - fechaInicio: LocalDate
         - fechaFin: LocalDate
-        - fechaRetiro: LocalDate
-        - motivoRetiro: String
         - estado: EstadoParticipacion
-
-        + esActivo(): boolean
+        - motivoRetiro: String
+        - fechaInicio: LocalDate
+        - fechaRetiro: LocalDate
+        - personal: PersonalDeInvestigacion
+        - idParticipacion: int
         + registrarRetiro(String): void
-        + estaRetirado(): boolean
-        + haFinalizado(): boolean
-        + calcularDuracion(): int
+        + calcularDuracionDias(): long
+        + esFinalizado(): boolean
+        + esRetirado(): boolean
+        + esActivo(): boolean
     }
 
     class InformeActividades {
-        - id: int
-        - fechaRegistro: LocalDate
-        - descripcionActividades: String
-        - horaEntrada: int
-        - horaSalida: int
         - estado: EstadoInforme
-        --
-        + registrarActividades(String): void
+        - personalDeInvestigacion: PersonalDeInvestigacion
+        - fechaRegistro: LocalDate
+        - idInforme: int
+        - proyecto: Proyecto
+        - semanas: List<SemanaActividades>
         + enviarParaRevision(): void
+        + devolverParaEdicion(): void
+        + rechazar(String): void
         + aprobar(): void
-        + rechazar(String motivo): void
+        + calcularHorasTotales(): double
+        + agregarSemana(SemanaActividades): void
     }
 
     class ResumenSeguimiento {
-        - cantidadAsistentesPlanificados: int
         - cantidadAsistentesRegistrados: int
-        - cantidadAsistentesActivos: int
-        - cantidadAsistentesRetirados: int
+        - cantidadTecnicosRetirados: int
         - totalPlanificado: int
-        - totalRegistrado: int
+        - cantidadAyudantesPlanificados: int
+        - cantidadAsistentesPlanificados: int
+        - cantidadAyudantesRegistrados: int
+        - cantidadTecnicosRegistrados: int
         - cumplePlanificacionGlobal: boolean
-        --
-        + calcularTotales(): void
+        - cantidadAsistentesRetirados: int
+        - cantidadAyudantesActivos: int
+        - cantidadTecnicosPlanificados: int
+        - cantidadTecnicosActivos: int
+        - cantidadAyudantesRetirados: int
+        - cantidadAsistentesActivos: int
+        - totalRegistrado: int
+        + isCumplePlanificacionGlobal(): boolean
         + verificarCumplimiento(): boolean
+        + calcularTotales(): void
     }
 
     class Notificacion {
-        - id: int
-        - destinatario: Director
-        - fechaEnvio: LocalDateTime
+        - fecha: LocalDateTime
+        - idUsuario: int
         - contenido: String
-        --
-        + enviar(): void
+        - idNotificacion: int
+    }
+
+    class SemanaActividades {
+      - horasSalida: Time[]
+      - id: int
+      - numeroSemana: int
+      - observaciones: String
+      - actividadSemanal: String
+      - horasInicio: Time[]
+      - fechas: Date[]
+      + contarDiasTrabajados(): int
+      + calcularHorasTotales(): double
     }
 
     class Asistente {}
@@ -225,5 +245,7 @@ Jefatura --> Notificacion
 ' Jefatura revisa informes
 Proyecto --> EstadoProyecto
 PersonalDeInvestigacion --> Proyecto
+
+InformeActividades --> SemanaActividades
 
 @enduml

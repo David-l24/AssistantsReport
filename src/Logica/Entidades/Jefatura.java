@@ -31,27 +31,46 @@ public class Jefatura {
 
     // --- LÓGICA DE NEGOCIO ---
 
+    /**
+     * Registra un proyecto en estado EN_REVISION.
+     * El director aún no existe como entidad en la BD, por lo que sus datos
+     * se guardan en los campos candidato_* del proyecto.
+     */
     public void registrarProyecto(Proyecto proyecto) throws SQLException {
         ProyectoDAO proyectoDAO = new ProyectoDAO();
-        proyectoDAO.guardar(proyecto);
+
+        // El director que tiene el objeto proyecto es temporal (solo con datos candidato).
+        Director dirCandidato = proyecto.getDirector();
+
+        proyectoDAO.guardarEnRevision(proyecto,
+                dirCandidato != null ? dirCandidato.getNombres() : null,
+                dirCandidato != null ? dirCandidato.getApellidos() : null,
+                dirCandidato != null ? dirCandidato.getCedula() : null,
+                dirCandidato != null ? dirCandidato.getCorreo() : null);
     }
 
     /**
-     * Actualiza el estado del proyecto y ejecuta las acciones correspondientes
+     * Actualiza el estado del proyecto y ejecuta las acciones correspondientes.
      * Cuando se aprueba un proyecto EN_REVISION:
      * 1. Crea el usuario del director
-     * 2. Crea la entidad Director
-     * 3. Vincula el director al proyecto
-     * 4. Envía notificación
+     * 2. Crea la entidad Director (linking al usuario)
+     * 3. Asigna cedula_director en el proyecto (FK)
+     * 4. Actualiza el estado del proyecto
+     * 5. Envía notificación al director
      */
     public void actualizarEstadoProyecto(Proyecto proyecto, EstadoProyecto nuevoEstado) throws SQLException {
         if (nuevoEstado == EstadoProyecto.APROBADO &&
                 proyecto.getEstado() == EstadoProyecto.EN_REVISION) {
 
+            Director dirCandidato = proyecto.getDirector();
+            if (dirCandidato == null || dirCandidato.getCedula() == null) {
+                throw new SQLException("El proyecto no tiene datos del director candidato");
+            }
+
             // Paso 1: Crear Usuario del director
             UsuarioDAO usuarioDAO = new UsuarioDAO();
             String username = generarUsernameDirector(proyecto);
-            String contrasenaDefecto = UsuarioDAO.generarContrasenaDefecto(proyecto.getDirector().getCedula());
+            String contrasenaDefecto = UsuarioDAO.generarContrasenaDefecto(dirCandidato.getCedula());
 
             Usuario usuarioDirector = new Usuario(username, contrasenaDefecto, "DIRECTOR");
             int idUsuarioGenerado = usuarioDAO.guardar(usuarioDirector);
@@ -62,20 +81,22 @@ public class Jefatura {
 
             // Paso 2: Crear entidad Director vinculada al usuario
             DirectorDAO directorDAO = new DirectorDAO();
-            Director nuevoDirector = proyecto.getDirector();
-            nuevoDirector.setIdUsuario(idUsuarioGenerado);
+            dirCandidato.setIdUsuario(idUsuarioGenerado);
 
-            boolean directorCreado = directorDAO.guardar(nuevoDirector);
+            boolean directorCreado = directorDAO.guardar(dirCandidato);
             if (!directorCreado) {
                 throw new SQLException("Error al crear el director");
             }
 
-            // Paso 3: Actualizar el proyecto
-            proyecto.setEstado(nuevoEstado);
+            // Paso 3: Asignar cedula_director en el proyecto (ahora el director existe)
             ProyectoDAO proyectoDAO = new ProyectoDAO();
+            proyectoDAO.actualizarDirector(proyecto.getIdProyecto(), dirCandidato.getCedula());
+
+            // Paso 4: Actualizar estado del proyecto
+            proyecto.setEstado(nuevoEstado);
             proyectoDAO.actualizar(proyecto);
 
-            // Paso 4: Enviar notificación al director
+            // Paso 5: Enviar notificación al director
             NotificacionDAO notifDAO = new NotificacionDAO();
             Notificacion notif = new Notificacion();
             notif.setIdUsuario(idUsuarioGenerado);
@@ -120,6 +141,18 @@ public class Jefatura {
         if (reporte.getEstado() == EstadoReporte.CERRADO) {
             reporte.setEstado(EstadoReporte.APROBADO);
             reporteDAO.actualizar(reporte);
+
+            // Notificar al director: el flujo exige que le llegue notificación
+            ProyectoDAO proyectoDAO = new ProyectoDAO();
+            Proyecto proyecto = proyectoDAO.obtenerPorId(reporte.getIdProyecto());
+            if (proyecto != null && proyecto.getDirector() != null) {
+                NotificacionDAO notifDAO = new NotificacionDAO();
+                Notificacion notif = new Notificacion();
+                notif.setIdUsuario(proyecto.getDirector().getIdUsuario());
+                notif.setContenido("Su reporte del proyecto '" + proyecto.getNombre() +
+                        "' ha sido aprobado por jefatura.");
+                notifDAO.guardar(notif);
+            }
         } else {
             throw new SQLException("Solo se pueden aprobar reportes cerrados.");
         }

@@ -171,13 +171,13 @@ public class ReporteDAO {
 
         List<Participacion> lista = new ArrayList<>();
 
-        // JOIN TRIPLE: reporte_participacion -> participacion -> integrante
-        String sql = "SELECT p.*, i.cedula, i.nombres, i.apellidos, i.correo, i.tipo " +
+        // JOIN TRIPLE: reporte_participacion -> participacion -> personaldeinvestigacion
+        String sql = "SELECT p.*, pi.cedula, pi.nombres, pi.apellidos, pi.correo, pi.tipo " +
                 "FROM reporte_participacion rp " +
                 "JOIN participacion p ON rp.id_participacion = p.id_participacion " +
-                "JOIN integrante i ON p.cedula_personal = i.cedula " +
+                "JOIN personaldeinvestigacion pi ON p.cedula_personal = pi.cedula " +
                 "WHERE rp.id_reporte = ? " +
-                "ORDER BY i.apellidos, i.nombres";
+                "ORDER BY pi.apellidos, pi.nombres";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setInt(1, reporte.getIdReporte());

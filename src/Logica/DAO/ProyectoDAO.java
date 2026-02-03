@@ -112,7 +112,7 @@ public class ProyectoDAO {
         String sql = "INSERT INTO Proyecto (codigo_proyecto, nombre, periodo_inicio, duracion_meses, estado, " +
                 "cedula_director, tipo_proyecto, num_asistentes_planificados, " +
                 "num_ayudantes_planificados, num_tecnico_planificados) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_proyecto";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, proyecto.getCodigoProyecto());
@@ -126,6 +126,64 @@ public class ProyectoDAO {
             stmt.setInt(9, proyecto.getNumAyudantesPlanificados());
             stmt.setInt(10, proyecto.getNumTecnicosPlanificados());
 
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                proyecto.setIdProyecto(rs.getInt("id_proyecto"));
+                return true;
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Guarda un proyecto en estado EN_REVISION.
+     * Como el director aún NO existe en la tabla director, cedula_director se deja NULL
+     * y los datos del director se almacenan en los campos candidato_* de la BD.
+     * Cuando el proyecto se aprueba, se usa actualizarDirector() para setear cedula_director.
+     */
+    public boolean guardarEnRevision(Proyecto proyecto, String candidato_nombres,
+                                     String candidato_apellidos, String candidato_cedula,
+                                     String candidato_correo) throws SQLException {
+        String sql = "INSERT INTO Proyecto (codigo_proyecto, nombre, periodo_inicio, duracion_meses, estado, " +
+                "cedula_director, tipo_proyecto, num_asistentes_planificados, " +
+                "num_ayudantes_planificados, num_tecnico_planificados, " +
+                "candidato_nombres, candidato_apellidos, candidato_cedula, candidato_correo) " +
+                "VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_proyecto";
+
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setString(1, proyecto.getCodigoProyecto());
+            stmt.setString(2, proyecto.getNombre());
+            stmt.setString(3, proyecto.getPeriodoInicio().getCodigo());
+            stmt.setInt(4, proyecto.getDuracionMeses());
+            stmt.setString(5, proyecto.getEstado().name());
+            stmt.setString(6, proyecto.getTipoProyecto());
+            stmt.setInt(7, proyecto.getNumAsistentesPlanificados());
+            stmt.setInt(8, proyecto.getNumAyudantesPlanificados());
+            stmt.setInt(9, proyecto.getNumTecnicosPlanificados());
+            stmt.setString(10, candidato_nombres);
+            stmt.setString(11, candidato_apellidos);
+            stmt.setString(12, candidato_cedula);
+            stmt.setString(13, candidato_correo);
+
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                proyecto.setIdProyecto(rs.getInt("id_proyecto"));
+                return true;
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Asigna el cedula_director real al proyecto DESPUÉS de que el director ya existe
+     * en la tabla director. Se usa en el flujo de aprobación.
+     */
+    public boolean actualizarDirector(int idProyecto, String cedulaDirector) throws SQLException {
+        String sql = "UPDATE Proyecto SET cedula_director = ? WHERE id_proyecto = ?";
+
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setString(1, cedulaDirector);
+            stmt.setInt(2, idProyecto);
             return stmt.executeUpdate() > 0;
         }
     }
@@ -182,6 +240,20 @@ public class ProyectoDAO {
         proyecto.setNumAsistentesPlanificados(rs.getInt("num_asistentes_planificados"));
         proyecto.setNumAyudantesPlanificados(rs.getInt("num_ayudantes_planificados"));
         proyecto.setNumTecnicosPlanificados(rs.getInt("num_tecnico_planificados"));
+
+        // Si el proyecto aún no tiene director real (EN_REVISION), construir uno temporal
+        // con los datos candidato para que Jefatura pueda usarlos en la aprobación.
+        if (proyecto.getDirector() == null) {
+            String candCedula = rs.getString("candidato_cedula");
+            if (candCedula != null) {
+                Director candidato = new Director();
+                candidato.setCedula(candCedula);
+                candidato.setNombres(rs.getString("candidato_nombres"));
+                candidato.setApellidos(rs.getString("candidato_apellidos"));
+                candidato.setCorreo(rs.getString("candidato_correo"));
+                proyecto.setDirector(candidato);
+            }
+        }
 
         // NOTA: La lista 'personalDeInvestigacion' se queda vacía aquí intencionalmente.
         // Se debe llamar a cargarPersonalDelProyecto(p) solo si se necesita.

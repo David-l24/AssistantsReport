@@ -1,0 +1,243 @@
+@startuml
+
+!theme plain
+top to bottom direction
+skinparam linetype ortho
+
+class Asistente {
+  + getTipo(): String
+}
+class Ayudante {
+  + getTipo(): String
+}
+class Director {
+  - correo: String
+  - nombres: String
+  - apellidos: String
+  - notificaciones: List<Notificacion>
+  - cedula: String
+  - idUsuario: int
+
+  + agregarParticipacionAReporte(int, int): void
+  + iniciarReporte(String, int): int
+  + aprobarInformeDeActividades(InformeActividades): void
+  + agregarNotificacion(Notificacion): void
+  + toString(): String
+  - generarUsernamePersonal(PersonalDeInvestigacion): String
+  + revisarInformeDeActividades(int): InformeActividades
+  + registrarParticipacion(String, LocalDate): void
+  + editarReporte(Reporte): void
+  + cerrarReporte(Reporte): void
+  + enviarReporte(Reporte): void
+  + rechazarInformeDeActividades(InformeActividades, String): void
+  + registrarPersonalDeInvestigacion(PersonalDeInvestigacion, int, LocalDate): void
+  + debeActualizarContrasena(): boolean
+  - obtenerIdUsuarioJefatura(): int
+  + actualizarContrasena(String): void
+  + cargarNotificaciones(): void
+}
+class InformeActividades {
+  - estado: EstadoInforme
+  - personalDeInvestigacion: PersonalDeInvestigacion
+  - fechaRegistro: LocalDate
+  - idInforme: int
+  - proyecto: Proyecto
+  - semanas: List<SemanaActividades>
+  + enviarParaRevision(): void
+  + devolverParaEdicion(): void
+  + rechazar(String): void
+  + aprobar(): void
+  + calcularHorasTotales(): double
+  + agregarSemana(SemanaActividades): void
+}
+class Jefatura {
+  - correo: String
+  - idUsuario: int
+  - nombres: String
+  - apellidos: String
+  - cedula: String
+  - notificaciones: List<Notificacion>
+  + agregarNotificacion(Notificacion): void
+
+  + revisarReportes(): List<Reporte>
+  - generarUsernameDirector(Proyecto): String
+  + registrarProyecto(Proyecto): void
+
+  + generarResumenSeguimiento(int): ResumenSeguimiento
+
+
+  + revisarInformeDeActividades(int): InformeActividades
+
+  + aprobarReporte(Reporte): void
+
+  + actualizarEstadoProyecto(Proyecto, EstadoProyecto): void
+
+  + cargarNotificaciones(): void
+
+}
+class Notificacion {
+  - fecha: LocalDateTime
+  - idUsuario: int
+  - contenido: String
+  - idNotificacion: int
+  + toString(): String
+
+}
+class Participacion {
+  - fechaFin: LocalDate
+  - estado: EstadoParticipacion
+  - motivoRetiro: String
+  - fechaInicio: LocalDate
+  - fechaRetiro: LocalDate
+  - personal: PersonalDeInvestigacion
+  - idParticipacion: int
+  + registrarRetiro(String): void
+  + calcularDuracionDias(): long
+  + esFinalizado(): boolean
+  + esRetirado(): boolean
+  + esActivo(): boolean
+
+}
+class PeriodoAcademico {
+  - fechaFin: LocalDate
+  - fechaInicio: LocalDate
+  - fechaMitad: LocalDate
+  - codigo: String
+
+}
+class PersonalDeInvestigacion {
+  - informesActividades: List<InformeActividades>
+  # notificaciones: List<Notificacion>
+  - cedula: String
+  - nombres: String
+  - correo: String
+  - apellidos: String
+  - idProyecto: int
+  - obtenerProyectoActual(): Proyecto
+  + iniciarInformeActividades(): InformeActividades
+  + cerrarInformeActividades(InformeActividades): void
+  + cargarNotificaciones(): void
+  + toString(): String
+  + debeActualizarContrasena(): boolean
+  + agregarInforme(InformeActividades): void
+  + editarInformeActividades(InformeActividades): void
+  + actualizarContrasena(String): void
+
+}
+class Proyecto {
+  - estado: EstadoProyecto
+  - director: Director
+  - numAsistentesPlanificados: int
+  - numAyudantesPlanificados: int
+  - codigoProyecto: String
+  - duracionMeses: int
+  - numTecnicosPlanificados: int
+  - personalDeInvestigacion: List<PersonalDeInvestigacion>
+  - periodoInicio: PeriodoAcademico
+  - idProyecto: int
+  - nombre: String
+  + agregarPersonal(PersonalDeInvestigacion): void
+  + actualizarEstado(): void
+}
+
+class ProyectoInterno {
+  + getTipoProyecto(): String
+}
+
+class ProyectoSemilla {
+  + getTipoProyecto(): String
+}
+
+class Reporte {
+  - idProyecto: int
+  - periodoAcademico: String
+  - participacionesIncluidas: List<Participacion>
+  - idReporte: int
+  - fechaInicio: LocalDate
+  - estado: EstadoReporte
+  - fechaCierre: LocalDate
+
+
+  + agregarParticipacion(Participacion): void
+  + estaAtrasado(PeriodoAcademico): boolean
+  + cerrarYEnviar(): void
+
+}
+class ResumenSeguimiento {
+  - cantidadAsistentesRegistrados: int
+  - cantidadTecnicosRetirados: int
+  - totalPlanificado: int
+  - cantidadAyudantesPlanificados: int
+  - cantidadAsistentesPlanificados: int
+  - cantidadAyudantesRegistrados: int
+  - cantidadTecnicosRegistrados: int
+  - cumplePlanificacionGlobal: boolean
+  - cantidadAsistentesRetirados: int
+  - cantidadAyudantesActivos: int
+  - cantidadTecnicosPlanificados: int
+  - cantidadTecnicosActivos: int
+  - cantidadAyudantesRetirados: int
+  - cantidadAsistentesActivos: int
+  - totalRegistrado: int
+  + isCumplePlanificacionGlobal(): boolean
+  + verificarCumplimiento(): boolean
+  + calcularTotales(): void
+
+}
+class SemanaActividades {
+  - horasSalida: Time[]
+  - id: int
+  - numeroSemana: int
+  - observaciones: String
+  - actividadSemanal: String
+  - horasInicio: Time[]
+  - fechas: Date[]
+  + contarDiasTrabajados(): int
+  + calcularHorasTotales(): double
+
+  + toString(): String
+}
+
+class Tecnico {
+  + getTipo(): String
+}
+
+class Usuario {
+  - idUsuario: int
+  - username: String
+  - contrasena: String
+  - rol: String
+  - activo: boolean
+
+  + isActivo(): boolean
+
+}
+
+Asistente                -[#000082,plain]-^  PersonalDeInvestigacion
+Ayudante                 -[#000082,plain]-^  PersonalDeInvestigacion
+Director                 -[#595959,dashed]->  Ayudante                : "«create»"
+Director                "1" *-[#595959,plain]-> "notificaciones\n*" Notificacion
+Director                 -[#595959,dashed]->  Notificacion            : "«create»"
+Director                 -[#595959,dashed]->  Participacion           : "«create»"
+Director                 -[#595959,dashed]->  Reporte                 : "«create»"
+Director                 -[#595959,dashed]->  Usuario                 : "«create»"
+InformeActividades       -[#595959,dashed]->  Notificacion            : "«create»"
+InformeActividades      "1" *-[#595959,plain]-> "personalDeInvestigacion\n1" PersonalDeInvestigacion
+InformeActividades      "1" *-[#595959,plain]-> "proyecto\n1" Proyecto
+InformeActividades      "1" *-[#595959,plain]-> "semanas\n*" SemanaActividades
+Jefatura                 -[#595959,dashed]->  Notificacion            : "«create»"
+Jefatura                "1" *-[#595959,plain]-> "notificaciones\n*" Notificacion
+Jefatura                 -[#595959,dashed]->  Usuario                 : "«create»"
+Participacion            -[#595959,dashed]->  Ayudante                : "«create»"
+Participacion           "1" *-[#595959,plain]-> "personal\n1" PersonalDeInvestigacion
+PersonalDeInvestigacion "1" *-[#595959,plain]-> "informesActividades\n*" InformeActividades
+PersonalDeInvestigacion  -[#595959,dashed]->  InformeActividades      : "«create»"
+PersonalDeInvestigacion "1" *-[#595959,plain]-> "notificaciones\n*" Notificacion
+Proyecto                "1" *-[#595959,plain]-> "director\n1" Director
+Proyecto                "1" *-[#595959,plain]-> "periodoInicio\n1" PeriodoAcademico
+Proyecto                "1" *-[#595959,plain]-> "personalDeInvestigacion\n*" PersonalDeInvestigacion
+ProyectoInterno          -[#000082,plain]-^  Proyecto
+ProyectoSemilla          -[#000082,plain]-^  Proyecto
+Reporte                 "1" *-[#595959,plain]-> "participacionesIncluidas\n*" Participacion
+Tecnico                  -[#000082,plain]-^  PersonalDeInvestigacion
+@enduml

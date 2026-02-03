@@ -95,6 +95,18 @@ public class InformeActividades {
     }
 
     /**
+     * Devuelve un informe rechazado al estado EN_EDICION para que el personal
+     * pueda corregirlo y reenviarlo.
+     * Ciclo: RECHAZADO -> EN_EDICION (luego puede volver a enviar)
+     */
+    public void devolverParaEdicion() {
+        if (this.estado != EstadoInforme.RECHAZADO) {
+            throw new IllegalStateException("Solo se pueden devolver para edición informes rechazados");
+        }
+        this.estado = EstadoInforme.EN_EDICION;
+    }
+
+    /**
      * Calcula total de horas trabajadas en todo el informe
      */
     public double calcularHorasTotales() {

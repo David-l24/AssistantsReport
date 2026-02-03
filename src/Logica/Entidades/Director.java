@@ -1,7 +1,6 @@
 package Logica.Entidades;
 
 import Logica.DAO.*;
-import Logica.Enumeraciones.EstadoInforme;
 import Logica.Enumeraciones.EstadoParticipacion;
 import Logica.Enumeraciones.EstadoReporte;
 
@@ -147,20 +146,16 @@ public class Director {
     }
 
     /**
-     * Obtiene el ID del usuario de jefatura
-     * Este método debería consultar la BD para encontrar un usuario con rol JEFATURA
+     * Obtiene el ID del usuario de jefatura consultando por rol directamente
      */
     private int obtenerIdUsuarioJefatura() throws SQLException {
         UsuarioDAO usuarioDAO = new UsuarioDAO();
-        List<Usuario> usuarios = usuarioDAO.obtenerTodos();
+        List<Usuario> jefaturas = usuarioDAO.obtenerPorRol("JEFATURA");
 
-        for (Usuario u : usuarios) {
-            if ("JEFATURA".equalsIgnoreCase(u.getRol())) {
-                return u.getIdUsuario();
-            }
+        if (jefaturas.isEmpty()) {
+            throw new SQLException("No se encontró usuario de Jefatura en el sistema");
         }
-
-        throw new SQLException("No se encontró usuario de Jefatura en el sistema");
+        return jefaturas.get(0).getIdUsuario();
     }
 
     public void agregarParticipacionAReporte(int idReporte, int idParticipacion) throws SQLException {
@@ -170,11 +165,11 @@ public class Director {
 
     public void editarReporte(Reporte reporte) throws SQLException {
         ReporteDAO reporteDAO = new ReporteDAO();
-        if (reporte.getEstado() != EstadoReporte.CERRADO) {
-            reporte.setEstado(EstadoReporte.EN_EDICION);
+        if (reporte.getEstado() == EstadoReporte.EN_EDICION) {
+            // Ya está en edición, persiste cualquier cambio que se haya hecho
             reporteDAO.actualizar(reporte);
         } else {
-            throw new SQLException("No se puede editar un reporte cerrado.");
+            throw new SQLException("Solo se pueden editar reportes en estado EN_EDICION.");
         }
     }
 
@@ -192,10 +187,24 @@ public class Director {
     }
 
     public void aprobarInformeDeActividades(InformeActividades informe) throws SQLException {
-        informe.setEstado(EstadoInforme.APROBADO);
-        // Aquí podrías llamar al DAO para persistir el cambio
-        // InformeActividadesDAO dao = new InformeActividadesDAO();
-        // dao.actualizar(informe);
+        // aprobar() ya valida que el estado sea ENVIADO y envía notificación al personal
+        informe.aprobar();
+
+        // Persistir el cambio de estado en la BD
+        InformeActividadesDAO dao = new InformeActividadesDAO();
+        dao.actualizar(informe);
+    }
+
+    /**
+     * Rechaza un informe de actividades con un motivo
+     */
+    public void rechazarInformeDeActividades(InformeActividades informe, String motivo) throws SQLException {
+        // rechazar() valida estado y notifica al personal
+        informe.rechazar(motivo);
+
+        // Persistir
+        InformeActividadesDAO dao = new InformeActividadesDAO();
+        dao.actualizar(informe);
     }
 
     // Gestión de Cuenta y Notificaciones
